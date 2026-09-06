@@ -108,11 +108,21 @@ export function leaveRoom(
     return null;
   }
 
+  const wasHost = room.hostId === userId;
+
   room.users.delete(userId);
 
   if (room.users.size === 0) {
     rooms.delete(roomCode);
     return null;
+  }
+
+  if (wasHost) {
+    const nextPlayer = room.users.values().next().value;
+
+    if (nextPlayer) {
+      room.hostId = nextPlayer.id;
+    }
   }
 
   return room;
