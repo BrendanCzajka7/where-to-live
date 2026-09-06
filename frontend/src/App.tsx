@@ -65,6 +65,56 @@ const directionalCriteria = new Set<Criterion>([
   "politics",
 ]);
 
+const preferenceGroups = [
+  {
+    label: "Climate",
+    keys: ["temperature", "humidity", "weatherSeverity"],
+  },
+  {
+    label: "Living",
+    keys: ["affordability", "safety", "jobs", "healthcare", "schools"],
+  },
+  {
+    label: "Lifestyle",
+    keys: ["nature", "mountains", "coast", "density", "politics"],
+  },
+] as const;
+
+function getSliderBackground(value: number, directional: boolean) {
+  const accent = "#6366f1";
+  const track = "#dfe5ee";
+
+  if (!directional) {
+    const percent = value * 10;
+
+    return `linear-gradient(to right,
+      ${accent} 0%,
+      ${accent} ${percent}%,
+      ${track} ${percent}%,
+      ${track} 100%)`;
+  }
+
+  const percent = ((value + 10) / 20) * 100;
+
+  if (percent < 50) {
+    return `linear-gradient(to right,
+      ${track} 0%,
+      ${track} ${percent}%,
+      ${accent} ${percent}%,
+      ${accent} 50%,
+      ${track} 50%,
+      ${track} 100%)`;
+  }
+
+  return `linear-gradient(to right,
+    ${track} 0%,
+    ${track} 50%,
+    ${accent} 50%,
+    ${accent} ${percent}%,
+    ${track} ${percent}%,
+    ${track} 100%)`;
+}
+
 const initialWeights: Weights = {
   affordability: 0,
   safety: 0,
@@ -502,11 +552,22 @@ export default function App() {
     .slice(0, 3);
 }
 
+if (room?.status === "lobby" && userId) {
+  return (
+    <Lobby
+      room={room}
+      userId={userId}
+      onStart={startRoom}
+      onLeave={handleLeaveRoom}
+    />
+  );
+}
+
   return (
     <main className="app">
       <header className="top-bar">
-        <div className="app-title">
-          <h1>Where Should We Live?</h1>
+        <div className="app-title game-title">
+          <h1>StateMatch</h1>
         </div>
 
         <div className="top-actions">
@@ -525,138 +586,109 @@ export default function App() {
 
       <div className="dashboard">
         <section className="panel preferences">
-            <div className="section-heading">
-              <h2>Preferences</h2>
-            </div>
-
-          <div className="sliders">
-            {criteria.map((criterion) => {
-              const isDirectional =
-                directionalCriteria.has(criterion.key);
-
-              const value =
-                personalWeights[criterion.key] ?? 0;
-
-              if (isDirectional) {
-                const [leftLabel, rightLabel] =
-                  getDirectionalLabels(criterion.key);
-                  
-
-                return (
-                  <div
-                    className="slider-row"
-                    key={criterion.key}
-                  >
-                    <div className="slider-label">
-                      <span>{criterion.label}</span>
-
-                      <strong
-                        className={
-                          value !== 0 ? "active-value" : ""
-                        }
-                      >
-                        {value === 0 ? "Any" : Math.abs(value)}
-                      </strong>
-                    </div>
-
-                    <input
-                      type="range"
-                      min="-10"
-                      max="10"
-                      step="1"
-                      value={value}
-                      onChange={(event) =>
-                        updateWeight(
-                          criterion.key,
-                          Number(event.target.value),
-                        )
-                      }
-                      aria-label={criterion.label}
-                    />
-
-                    <div className="direction-labels">
-                      <span>{leftLabel}</span>
-                      <span>Any</span>
-                      <span>{rightLabel}</span>
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <label
-                  className="slider-row"
-                  key={criterion.key}
-                >
-                  <div className="slider-label">
-                    <span>{criterion.label}</span>
-
-                    <strong
-                      className={
-                        value !== 0 ? "active-value" : ""
-                      }
-                    >
-                      {value}
-                    </strong>
-                  </div>
-
-                  <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    step="1"
-                    value={value}
-                    onChange={(event) =>
-                      updateWeight(
-                        criterion.key,
-                        Number(event.target.value),
-                      )
-                    }
-                  />
-
-                  <div className="importance-labels">
-                    <span>Don't care</span>
-                    <span>Essential</span>
-                  </div>
-                </label>
-              );
-            })}
+          <div className="section-heading">
+            <h2>Preferences</h2>
           </div>
+
+          <div className="preference-groups">
+            {preferenceGroups.map((group) => (
+              <div className="preference-group" key={group.label}>
+                <div className="preference-group-title">
+                  {group.label}
+                </div>
+
+                <div className="sliders">
+                  {group.keys.map((key) => {
+                    const criterion = criteria.find(
+                      (item) => item.key === key,
+                    )!;
+
+                    const isDirectional =
+                      directionalCriteria.has(criterion.key);
+
+                    const value =
+                      personalWeights[criterion.key] ?? 0;
+
+                    const [leftLabel, rightLabel] =
+                      isDirectional
+                        ? getDirectionalLabels(criterion.key)
+                        : ["", ""];
+                    return (
+                      <label
+                        className="slider-row"
+                        key={criterion.key}
+                      >
+                        <div className="slider-label">
+                          {isDirectional ? (
+                            <>
+                              <span>{leftLabel}</span>
+                              <span>{rightLabel}</span>
+                            </>
+                          ) : (
+                            <span>{criterion.label}</span>
+                          )}
+                        </div>
+
+                        <div className="slider-control">
+                          <input
+                            type="range"
+                            min={isDirectional ? -10 : 0}
+                            max="10"
+                            step="1"
+                            value={value}
+                            style={{
+                              background: getSliderBackground(
+                                value,
+                                isDirectional,
+                              ),
+                            }}
+                            onChange={(event) =>
+                              updateWeight(
+                                criterion.key,
+                                Number(event.target.value),
+                              )
+                            }
+                            aria-label={criterion.label}
+                          />
+
+                          {isDirectional && (
+                            <span className="slider-midpoint" />
+                          )}
+                        </div>
+                      </label>
+                    );
+                    
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
           <button
             type="button"
             className="panel-reset"
             onClick={resetWeights}
             disabled={!hasPreferences}
           >
-            Reset preferences
+            Reset
           </button>
         </section>
 
         <section className="panel map-panel">
           <div className="map-header">
             <div>
-              <p className="section-kicker">
-                {isRoom ? "GROUP MATCHES" : "YOUR MATCHES"}
-              </p>
-
-              <h2>
-                {hasPreferences
-                  ? isRoom
-                    ? "Best states for your group"
-                    : "Best states for you"
-                  : isRoom
-                    ? "Waiting for group preferences"
-                    : "Start with your priorities"}
-              </h2>
+              {hasPreferences && (
+                <h2>
+                  {isRoom ? "Group matches" : "Matches"}
+                </h2>
+              )}
             </div>
 
-            <span className="map-hint">
-              {hasPreferences
-                ? "Click a state for details"
-                : isRoom
-                  ? "Move a slider to begin"
-                  : "Move a slider to begin"}
-            </span>
+            {!hasPreferences && (
+              <span className="map-hint">
+                Move a slider to begin
+              </span>
+              )}
           </div>
 
           <div className="map-wrapper">
@@ -761,46 +793,88 @@ export default function App() {
           )}
 
           <div className="legend">
-            {hasPreferences ? (
+            {hasPreferences && (
               <>
                 <span>Lower match</span>
                 <div className="legend-gradient" />
                 <span>Higher match</span>
               </>
-            ) : (
-              <span>
-                {isRoom
-                  ? "The map updates from your group's combined preferences."
-                  : "Your map will update as you choose what matters."}
-              </span>
             )}
           </div>
         </section>
 
         <section className="panel rankings">
-          <div className="ranking-section">
-            <div className="ranking-heading">
-              <div>
-                <p className="section-kicker">
-                  {isRoom ? "GROUP BEST FIT" : "BEST FIT"}
-                </p>
-                <h2>Top states</h2>
+          <div className="ranking-heading">
+            <div>
+              <h2>Rankings</h2>
+            </div>
+          </div>
+
+          {!hasPreferences ? (
+            <div className="empty-leaderboard">
+              {Array.from({ length: 10 }).map((_, index) => (
+                <div
+                  className="ranking-placeholder"
+                  key={index}
+                >
+                  <span>{index + 1}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="leaderboard-section">
+                <p>▲ Best matches</p>
+
+                <div className="ranking-list">
+                  {rankedStates
+                    .slice(0, 5)
+                    .map((state, index) => (
+                      <button
+                        type="button"
+                        className="ranking-row"
+                        key={state.name}
+                        onClick={() => openState(state.name)}
+                      >
+                        <span className="rank">
+                          {index + 1}
+                        </span>
+
+                        <span className="ranking-state">
+                          <strong>{state.name}</strong>
+
+                          <span className="ranking-reasons">
+                            {getTopReasons(state).map((item) => (
+                              <span
+                                className="reason-positive"
+                                key={item.key}
+                                title={
+                                  criteria.find(
+                                    (c) => c.key === item.key,
+                                  )?.label
+                                }
+                              >
+                                {criterionIcons[item.key]}
+                              </span>
+                            ))}
+                          </span>
+                        </span>
+
+                        <strong className="score">
+                          {state.score}%
+                        </strong>
+                      </button>
+                    ))}
+                </div>
               </div>
 
-              <span>Match</span>
-            </div>
+              <div className="leaderboard-divider" />
 
-            {!hasPreferences ? (
-              <p className="empty-ranking">
-                {isRoom
-                  ? "Group rankings will appear as preferences are added."
-                  : "Choose at least one preference to rank the states."}
-              </p>
-            ) : (
-              <div className="ranking-list">
-                {rankedStates
-                  .slice(0, 5)
-                  .map((state, index) => (
+              <div className="leaderboard-section">
+                <p>▼ Least matches</p>
+
+                <div className="ranking-list">
+                  {worstStates.map((state, index) => (
                     <button
                       type="button"
                       className="ranking-row"
@@ -811,112 +885,35 @@ export default function App() {
                         {index + 1}
                       </span>
 
-                     <span className="ranking-state">
-                      <strong>{state.name}</strong>
+                      <span className="ranking-state">
+                        <strong>{state.name}</strong>
 
-                      <span className="score-bar">
-                        <span
-                          className="score-fill"
-                          style={{
-                            width: `${state.score}%`,
-                          }}
-                        />
+                        <span className="ranking-reasons">
+                          {getTopReasons(state, false).map((item) => (
+                            <span
+                              className="reason-negative"
+                              key={item.key}
+                              title={
+                                criteria.find(
+                                  (c) => c.key === item.key,
+                                )?.label
+                              }
+                            >
+                              {criterionIcons[item.key]}
+                            </span>
+                          ))}
+                        </span>
                       </span>
-
-                      <span className="ranking-reasons">
-                        {getTopReasons(state).map((item) => (
-                          <span
-                            className="reason-positive"
-                            key={item.key}
-                            title={
-                              criteria.find(
-                                (c) => c.key === item.key,
-                              )?.label
-                            }
-                          >
-                            {criterionIcons[item.key]}
-                          </span>
-                        ))}
-                      </span>
-                    </span>
 
                       <strong className="score">
                         {state.score}%
                       </strong>
                     </button>
                   ))}
+                </div>
               </div>
-            )}
-          </div>
-
-          <div className="ranking-divider" />
-
-          <div className="ranking-section">
-            <div className="ranking-heading">
-              <div>
-                <p className="section-kicker">
-                  {isRoom ? "GROUP WORST FIT" : "WORST FIT"}
-                </p>
-                <h2>Lowest states</h2>
-              </div>
-
-              <span>Match</span>
-            </div>
-
-            {!hasPreferences ? (
-              <p className="empty-ranking">
-                Your lowest matches will appear here.
-              </p>
-            ) : (
-              <div className="ranking-list">
-                {worstStates.map((state, index) => (
-                  <button
-                    type="button"
-                    className="ranking-row"
-                    key={state.name}
-                    onClick={() => openState(state.name)}
-                  >
-                    <span className="rank">
-                      {index + 1}
-                    </span>
-
-                    <span className="ranking-state">
-                      <strong>{state.name}</strong>
-
-                      <span className="score-bar">
-                        <span
-                          className="score-fill"
-                          style={{
-                            width: `${state.score}%`,
-                          }}
-                        />
-                      </span>
-
-                      <span className="ranking-reasons">
-                        {getTopReasons(state, false).map((item) => (
-                          <span
-                            className="reason-negative"
-                            key={item.key}
-                            title={
-                              criteria.find(
-                                (c) => c.key === item.key,
-                              )?.label
-                            }
-                          >
-                            {criterionIcons[item.key]}
-                          </span>
-                        ))}
-                      </span>
-                    </span>
-
-                    <strong className="score">
-                      {state.score}%
-                    </strong>
-                    </button>
-                  ))}
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </section>
       </div>
 

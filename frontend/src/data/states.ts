@@ -11,7 +11,7 @@ export const criteria = [
   { key: "politics", label: "Red / Blue" },
   { key: "healthcare", label: "Healthcare" },
   { key: "schools", label: "Schools" },
-  { key: "weatherSeverity", label: "Weather Safety" },
+  { key: "weatherSeverity", label: "Extreme Weather" },
 ] as const;
 
 export type Criterion = (typeof criteria)[number]["key"];
