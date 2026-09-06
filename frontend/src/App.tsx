@@ -246,6 +246,67 @@ function StateScorecard({
         b.match - a.match,
     );
 
+    if (!isRoom) {
+      return (
+        <div className="scorecard-backdrop" onMouseDown={onClose}>
+          <aside
+            className="scorecard solo-scorecard"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="scorecard-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="solo-scorecard-header">
+              <h2 id="scorecard-title">{state.name}</h2>
+
+              <button
+                type="button"
+                className="scorecard-close"
+                onClick={onClose}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="solo-scorecard-result">
+              <span className="solo-result-label">YOUR MATCH</span>
+
+              <div className="solo-result-numbers">
+                <strong>{state.score}%</strong>
+                <span>#{rank} of 50</span>
+              </div>
+            </div>
+
+            <div className="solo-breakdown">
+              {breakdown.map((item) => (
+                <div className="solo-breakdown-row" key={item.key}>
+                  <div className="solo-breakdown-top">
+                    <span className="solo-breakdown-name">
+                      <span className="solo-breakdown-icon">
+                      {criterionIcons[item.key]}
+                    </span>
+
+                      {item.label}
+                    </span>
+
+                    <strong>{item.match}%</strong>
+                  </div>
+
+                  <div className="solo-breakdown-bar">
+                    <div
+                      className="solo-breakdown-fill"
+                      style={{ width: `${item.match}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      );
+    }
+
   return (
     <div className="scorecard-backdrop" onMouseDown={onClose}>
       <aside
@@ -388,9 +449,11 @@ export default function App() {
     updatePreferences,
   ]);
 
-  const hasPreferences = Object.values(displayWeights).some(
-    (value) => value !== 0,
-  );
+  const hasPreferences = room
+  ? room.users.some((user) =>
+      Object.values(user.preferences).some((value) => value !== 0),
+    )
+  : Object.values(personalWeights).some((value) => value !== 0);
 
   const rankedStates = useMemo<RankedState[]>(() => {
     const totalWeight = criteria.reduce((total, criterion) => {
@@ -739,56 +802,6 @@ if (room?.status === "lobby" && userId) {
               </div>
             )}
           </div>
-
-          {room && (
-            <div className="group-preferences">
-              <div className="group-preferences-heading">
-                <span>GROUP PREFERENCES</span>
-                <small>Click a preference to see everyone's input</small>
-              </div>
-
-              <div className="group-preference-list">
-                {criteria
-                  .filter(
-                    (criterion) =>
-                      room.combinedPreferences[
-                        criterion.key
-                      ] !== 0,
-                  )
-                  .map((criterion) => (
-                    <button
-                      type="button"
-                      className="group-preference-chip"
-                      key={criterion.key}
-                      onClick={() =>
-                        setSelectedGroupCriterion(
-                          criterion.key,
-                        )
-                      }
-                    >
-                      <span>{criterion.label}</span>
-
-                      <strong>
-                        {formatGroupValue(
-                          criterion.key,
-                          room.combinedPreferences[
-                            criterion.key
-                          ],
-                        )}
-                      </strong>
-                    </button>
-                  ))}
-
-                {!Object.values(
-                  room.combinedPreferences,
-                ).some((value) => value !== 0) && (
-                  <span className="group-preferences-empty">
-                    No group preferences yet
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
 
           <div className="legend">
             <span>Lower match</span>

@@ -30,6 +30,7 @@ export function RoomPanel({
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   const [selectedIcon, setSelectedIcon] = useState("🌲");
 
@@ -56,6 +57,7 @@ export function RoomPanel({
     if (cleanCode.length !== 4) return;
 
     onJoinRoom(cleanName, cleanCode, selectedIcon);
+    setIsOpen(false);
   }
 
   async function copyCode() {
@@ -68,84 +70,120 @@ export function RoomPanel({
       setCopied(false);
     }, 1500);
   }
-
   function leave() {
-    onLeaveRoom();
-    setIsOpen(false);
-    setName("");
-    setRoomCode("");
-  }
+  onLeaveRoom();
+  setShowLeaveConfirm(false);
+  setIsOpen(false);
+  setName("");
+  setRoomCode("");
+}
 
   if (room) {
-    return (
-      <>
+  return (
+    <>
+      <div className="room-actions">
+      <div className="room-code-display">
+        <span>{room.code}</span>
+
         <button
           type="button"
-          className="room-status-button"
-          onClick={() => setIsOpen(true)}
+          className="room-copy-link"
+          onClick={copyCode}
+          aria-label="Copy room code"
+          title={copied ? "Copied" : "Copy room code"}
         >
-          <span className="room-live-dot" />
-          <span>
-            <strong>ROOM {room.code}</strong>
-            <small>
-              {room.users.length}{" "}
-              {room.users.length === 1 ? "person" : "people"}
-            </small>
-          </span>
+          🔗
         </button>
+      </div>
 
-        {isOpen && (
+      <button
+        type="button"
+        className="room-leave-button"
+        onClick={() => setShowLeaveConfirm(true)}
+      >
+        Leave
+      </button>
+    </div>
+
+      {isOpen && (
+        <div
+          className="room-backdrop"
+          onMouseDown={() => setIsOpen(false)}
+        >
+          <section
+            className="room-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="room-dialog-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="room-dialog-header">
+              <div>
+                <p className="section-kicker">GROUP ROOM</p>
+                <h2 id="room-dialog-title">{room.code}</h2>
+              </div>
+
+              <button
+                type="button"
+                className="room-close"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close room details"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="room-members">
+              <span className="room-label">
+                {room.users.length}{" "}
+                {room.users.length === 1 ? "person" : "people"}
+              </span>
+
+              {room.users.map((user) => (
+                <div className="room-member" key={user.id}>
+                  <span className="member-dot" />
+
+                  <strong>{user.name}</strong>
+
+                  {user.id === userId && <span>You</span>}
+                </div>
+              ))}
+            </div>
+
+            <div className="room-dialog-actions">
+              <button
+                type="button"
+                className="room-secondary-button"
+                onClick={copyCode}
+              >
+                {copied ? "Copied" : "Copy room code"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {showLeaveConfirm && (
           <div
             className="room-backdrop"
-            onMouseDown={() => setIsOpen(false)}
+            onMouseDown={() => setShowLeaveConfirm(false)}
           >
             <section
-              className="room-dialog"
-              role="dialog"
+              className="leave-confirm"
+              role="alertdialog"
               aria-modal="true"
-              aria-labelledby="room-dialog-title"
+              aria-labelledby="leave-confirm-title"
               onMouseDown={(event) => event.stopPropagation()}
             >
-              <div className="room-dialog-header">
-                <div>
-                  <p className="section-kicker">GROUP ROOM</p>
-                  <h2 id="room-dialog-title">{room.code}</h2>
-                </div>
+              <h2 id="leave-confirm-title">Leave room?</h2>
+              <p>Are you sure you want to leave? Your preferences will be lost</p>
 
-                <button
-                  type="button"
-                  className="room-close"
-                  onClick={() => setIsOpen(false)}
-                  aria-label="Close room details"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="room-members">
-                <span className="room-label">
-                  {room.users.length}{" "}
-                  {room.users.length === 1 ? "person" : "people"}
-                </span>
-
-                {room.users.map((user) => (
-                  <div className="room-member" key={user.id}>
-                    <span className="member-dot" />
-
-                    <strong>{user.name}</strong>
-
-                    {user.id === userId && <span>You</span>}
-                  </div>
-                ))}
-              </div>
-
-              <div className="room-dialog-actions">
+              <div className="leave-confirm-actions">
                 <button
                   type="button"
                   className="room-secondary-button"
-                  onClick={copyCode}
+                  onClick={() => setShowLeaveConfirm(false)}
                 >
-                  {copied ? "Copied" : "Copy room code"}
+                  Cancel
                 </button>
 
                 <button
@@ -153,15 +191,15 @@ export function RoomPanel({
                   className="room-leave-button"
                   onClick={leave}
                 >
-                  Leave room
+                  Leave
                 </button>
               </div>
             </section>
           </div>
         )}
-      </>
-    );
-  }
+    </>
+  );
+}
 
   return (
     <>
