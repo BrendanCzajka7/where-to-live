@@ -249,6 +249,7 @@ input[type="range"] {
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
   cursor: pointer;
+  outline: none;
 
   transition:
     fill 160ms ease,
@@ -258,6 +259,11 @@ input[type="range"] {
 
 .state:hover {
   opacity: 0.78;
+  stroke-width: 2.5;
+}
+
+.state-selected {
+  stroke: #172033;
   stroke-width: 2.5;
 }
 
@@ -354,12 +360,23 @@ input[type="range"] {
   grid-template-columns: 22px minmax(0, 1fr) 38px;
   align-items: center;
   gap: 8px;
+  width: 100%;
   padding: 8px 0;
+
+  border: 0;
   border-bottom: 1px solid #f1f5f9;
+
+  background: transparent;
+  color: inherit;
+  text-align: left;
 }
 
 .ranking-row:last-child {
   border-bottom: 0;
+}
+
+.ranking-row:hover {
+  background: #f8fafc;
 }
 
 .rank {
@@ -369,6 +386,7 @@ input[type="range"] {
 }
 
 .ranking-state {
+  display: block;
   min-width: 0;
 }
 
@@ -383,6 +401,7 @@ input[type="range"] {
 }
 
 .score-bar {
+  display: block;
   width: 100%;
   height: 3px;
   overflow: hidden;
@@ -391,6 +410,7 @@ input[type="range"] {
 }
 
 .score-fill {
+  display: block;
   height: 100%;
   border-radius: inherit;
   background: #4f46e5;
@@ -416,7 +436,187 @@ input[type="range"] {
   line-height: 1.5;
 }
 
-/* DESKTOP: FIT THE VIEWPORT */
+/* SCORECARD */
+
+.scorecard-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+
+  display: flex;
+  justify-content: flex-end;
+
+  background: rgb(15 23 42 / 0.28);
+  backdrop-filter: blur(2px);
+}
+
+.scorecard {
+  width: min(410px, 100%);
+  height: 100%;
+  overflow-y: auto;
+
+  padding: 28px;
+
+  border-left: 1px solid #e1e7ef;
+
+  background: #ffffff;
+
+  box-shadow: -16px 0 40px rgb(15 23 42 / 0.12);
+}
+
+.scorecard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.scorecard-header h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 28px;
+  letter-spacing: -0.035em;
+}
+
+.scorecard-close {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+
+  width: 36px;
+  height: 36px;
+
+  border: 1px solid #e1e7ef;
+  border-radius: 10px;
+
+  background: #ffffff;
+  color: #64748b;
+
+  font-size: 24px;
+  line-height: 1;
+}
+
+.scorecard-close:hover {
+  background: #f8fafc;
+  color: #172033;
+}
+
+.scorecard-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+
+  margin: 26px 0 30px;
+}
+
+.scorecard-summary > div {
+  padding: 16px;
+
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+
+  background: #f8fafc;
+}
+
+.scorecard-summary span {
+  display: block;
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.scorecard-summary strong {
+  color: #172033;
+  font-size: 26px;
+  letter-spacing: -0.04em;
+}
+
+.scorecard-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 18px;
+}
+
+.scorecard-section-heading h3 {
+  margin: 0;
+  color: #172033;
+  font-size: 15px;
+}
+
+.scorecard-section-heading span {
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.scorecard-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.breakdown-row {
+  display: block;
+}
+
+.breakdown-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-bottom: 6px;
+
+  color: #334155;
+  font-size: 12px;
+}
+
+.breakdown-label span {
+  font-weight: 650;
+}
+
+.breakdown-label strong {
+  font-size: 11px;
+}
+
+.breakdown-bar {
+  width: 100%;
+  height: 6px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+
+  background: #e9eef5;
+}
+
+.breakdown-fill {
+  height: 100%;
+
+  border-radius: inherit;
+
+  background: #4f46e5;
+
+  transition: width 180ms ease;
+}
+
+.scorecard-note {
+  margin: 28px 0 0;
+  padding-top: 18px;
+
+  border-top: 1px solid #e9eef5;
+
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+/* DESKTOP */
 
 @media (min-width: 1101px) {
   html,
@@ -569,5 +769,42 @@ input[type="range"] {
   .direction-labels,
   .importance-labels {
     font-size: 9px;
+  }
+
+  /* Scorecard becomes a bottom sheet */
+
+  .scorecard-backdrop {
+    align-items: flex-end;
+    justify-content: stretch;
+  }
+
+  .scorecard {
+    width: 100%;
+    height: auto;
+    max-height: 82vh;
+
+    padding: 20px;
+
+    border-top: 1px solid #e1e7ef;
+    border-left: 0;
+    border-radius: 20px 20px 0 0;
+
+    box-shadow: 0 -16px 40px rgb(15 23 42 / 0.14);
+  }
+
+  .scorecard-header h2 {
+    font-size: 24px;
+  }
+
+  .scorecard-summary {
+    margin: 20px 0 24px;
+  }
+
+  .scorecard-summary > div {
+    padding: 13px;
+  }
+
+  .scorecard-summary strong {
+    font-size: 22px;
   }
 }

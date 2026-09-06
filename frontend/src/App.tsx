@@ -5,9 +5,18 @@ import type { Feature, FeatureCollection, Geometry } from "geojson";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import us from "us-atlas/states-10m.json";
 
-import { criteria, states, type Criterion } from "./data/states";
+import {
+  criteria,
+  states,
+  type Criterion,
+  type StateData,
+} from "./data/states";
 
 type Weights = Record<Criterion, number>;
+
+type RankedState = StateData & {
+  score: number;
+};
 
 type MapProperties = {
   name: string;
@@ -99,15 +108,132 @@ function getDirectionalMatch(
   return Math.max(0, 100 - distance);
 }
 
+function getCriterionMatch(
+  state: StateData,
+  criterion: Criterion,
+  preference: number,
+) {
+  if (directionalCriteria.has(criterion)) {
+    return Math.round(
+      getDirectionalMatch(state[criterion], preference),
+    );
+  }
+
+  return Math.round(state[criterion]);
+}
+
+function StateScorecard({
+  state,
+  weights,
+  rank,
+  onClose,
+}: {
+  state: RankedState;
+  weights: Weights;
+  rank: number;
+  onClose: () => void;
+}) {
+  const breakdown = criteria
+    .filter((criterion) => (weights[criterion.key] ?? 0) !== 0)
+    .map((criterion) => ({
+      key: criterion.key,
+      label: criterion.label,
+      match: getCriterionMatch(
+        state,
+        criterion.key,
+        weights[criterion.key],
+      ),
+      importance: Math.abs(weights[criterion.key]),
+    }))
+    .sort(
+      (a, b) =>
+        b.importance ** 2 - a.importance ** 2 ||
+        b.match - a.match,
+    );
+
+  return (
+    <div className="scorecard-backdrop" onMouseDown={onClose}>
+      <aside
+        className="scorecard"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="scorecard-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="scorecard-header">
+          <div>
+            <p className="section-kicker">STATE SCORECARD</p>
+            <h2 id="scorecard-title">{state.name}</h2>
+          </div>
+
+          <button
+            type="button"
+            className="scorecard-close"
+            onClick={onClose}
+            aria-label="Close state scorecard"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="scorecard-summary">
+          <div>
+            <span>Overall match</span>
+            <strong>{state.score}%</strong>
+          </div>
+
+          <div>
+            <span>Overall rank</span>
+            <strong>#{rank}</strong>
+          </div>
+        </div>
+
+        <div className="scorecard-breakdown">
+          <div className="scorecard-section-heading">
+            <h3>Your match breakdown</h3>
+            <span>Selected priorities</span>
+          </div>
+
+          {breakdown.map((item) => (
+            <div className="breakdown-row" key={item.key}>
+              <div className="breakdown-label">
+                <span>{item.label}</span>
+                <strong>{item.match}%</strong>
+              </div>
+
+              <div className="breakdown-bar">
+                <div
+                  className="breakdown-fill"
+                  style={{ width: `${item.match}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="scorecard-note">
+          Breakdown only includes preferences you selected.
+          Stronger preferences have more influence on the overall score.
+        </p>
+      </aside>
+    </div>
+  );
+}
+
 export default function App() {
   const [weights, setWeights] = useState<Weights>(initialWeights);
-  const [hoveredState, setHoveredState] = useState<string | null>(null);
+  const [hoveredState, setHoveredState] = useState<string | null>(
+    null,
+  );
+  const [selectedStateName, setSelectedStateName] = useState<
+    string | null
+  >(null);
 
   const hasPreferences = Object.values(weights).some(
     (value) => value !== 0,
   );
 
-  const rankedStates = useMemo(() => {
+  const rankedStates = useMemo<RankedState[]>(() => {
     const totalWeight = criteria.reduce((total, criterion) => {
       const value = weights[criterion.key] ?? 0;
       return total + Math.abs(value) ** 2;
@@ -122,28 +248,31 @@ export default function App() {
           };
         }
 
-        const weightedTotal = criteria.reduce((total, criterion) => {
-          const key = criterion.key;
-          const preference = weights[key] ?? 0;
-          const stateValue = state[key];
+        const weightedTotal = criteria.reduce(
+          (total, criterion) => {
+            const key = criterion.key;
+            const preference = weights[key] ?? 0;
+            const stateValue = state[key];
 
-          if (directionalCriteria.has(key)) {
-            const importance = Math.abs(preference) ** 2;
+            if (directionalCriteria.has(key)) {
+              const importance = Math.abs(preference) ** 2;
 
-            if (importance === 0) return total;
+              if (importance === 0) return total;
 
-            const match = getDirectionalMatch(
-              stateValue,
-              preference,
-            );
+              const match = getDirectionalMatch(
+                stateValue,
+                preference,
+              );
 
-            return total + match * importance;
-          }
+              return total + match * importance;
+            }
 
-          const importance = preference ** 2;
+            const importance = preference ** 2;
 
-          return total + stateValue * importance;
-        }, 0);
+            return total + stateValue * importance;
+          },
+          0,
+        );
 
         return {
           ...state,
@@ -164,12 +293,38 @@ export default function App() {
     [rankedStates],
   );
 
+  const stateByName = useMemo(
+    () =>
+      new Map(
+        rankedStates.map((state) => [state.name, state]),
+      ),
+    [rankedStates],
+  );
+
+  const rankByState = useMemo(
+    () =>
+      new Map(
+        rankedStates.map((state, index) => [
+          state.name,
+          index + 1,
+        ]),
+      ),
+    [rankedStates],
+  );
+
   const worstStates = useMemo(
     () => [...rankedStates].reverse().slice(0, 5),
     [rankedStates],
   );
 
-  function updateWeight(criterion: Criterion, value: number) {
+  const selectedState = selectedStateName
+    ? stateByName.get(selectedStateName) ?? null
+    : null;
+
+  function updateWeight(
+    criterion: Criterion,
+    value: number,
+  ) {
     setWeights((current) => ({
       ...current,
       [criterion]: value,
@@ -178,6 +333,12 @@ export default function App() {
 
   function resetWeights() {
     setWeights(initialWeights);
+    setSelectedStateName(null);
+  }
+
+  function openState(name: string) {
+    if (!hasPreferences) return;
+    setSelectedStateName(name);
   }
 
   return (
@@ -212,9 +373,8 @@ export default function App() {
 
           <div className="sliders">
             {criteria.map((criterion) => {
-              const isDirectional = directionalCriteria.has(
-                criterion.key,
-              );
+              const isDirectional =
+                directionalCriteria.has(criterion.key);
 
               const value = weights[criterion.key] ?? 0;
 
@@ -230,7 +390,11 @@ export default function App() {
                     <div className="slider-label">
                       <span>{criterion.label}</span>
 
-                      <strong className={value !== 0 ? "active-value" : ""}>
+                      <strong
+                        className={
+                          value !== 0 ? "active-value" : ""
+                        }
+                      >
                         {value === 0 ? "Any" : Math.abs(value)}
                       </strong>
                     </div>
@@ -267,7 +431,11 @@ export default function App() {
                   <div className="slider-label">
                     <span>{criterion.label}</span>
 
-                    <strong className={value !== 0 ? "active-value" : ""}>
+                    <strong
+                      className={
+                        value !== 0 ? "active-value" : ""
+                      }
+                    >
                       {value}
                     </strong>
                   </div>
@@ -309,7 +477,7 @@ export default function App() {
 
             <span className="map-hint">
               {hasPreferences
-                ? "Hover over a state"
+                ? "Click a state for details"
                 : "Move a slider to begin"}
             </span>
           </div>
@@ -333,9 +501,18 @@ export default function App() {
                     key={name}
                     d={path}
                     fill={getColor(score, hasPreferences)}
-                    className="state"
-                    onMouseEnter={() => setHoveredState(name)}
-                    onMouseLeave={() => setHoveredState(null)}
+                    className={`state ${
+                      selectedStateName === name
+                        ? "state-selected"
+                        : ""
+                    }`}
+                    onMouseEnter={() =>
+                      setHoveredState(name)
+                    }
+                    onMouseLeave={() =>
+                      setHoveredState(null)
+                    }
+                    onClick={() => openState(name)}
                   />
                 );
               })}
@@ -347,7 +524,9 @@ export default function App() {
 
                 <span>
                   {hasPreferences
-                    ? `${scoreByState.get(hoveredState) ?? 0}% match`
+                    ? `${
+                        scoreByState.get(hoveredState) ?? 0
+                      }% match · Click for details`
                     : "Set preferences to score"}
                 </span>
               </div>
@@ -386,33 +565,37 @@ export default function App() {
               </p>
             ) : (
               <div className="ranking-list">
-                {rankedStates.slice(0, 5).map((state, index) => (
-                  <div
-                    className="ranking-row"
-                    key={state.name}
-                  >
-                    <span className="rank">
-                      {index + 1}
-                    </span>
+                {rankedStates
+                  .slice(0, 5)
+                  .map((state, index) => (
+                    <button
+                      type="button"
+                      className="ranking-row"
+                      key={state.name}
+                      onClick={() => openState(state.name)}
+                    >
+                      <span className="rank">
+                        {index + 1}
+                      </span>
 
-                    <div className="ranking-state">
-                      <strong>{state.name}</strong>
+                      <span className="ranking-state">
+                        <strong>{state.name}</strong>
 
-                      <div className="score-bar">
-                        <div
-                          className="score-fill"
-                          style={{
-                            width: `${state.score}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
+                        <span className="score-bar">
+                          <span
+                            className="score-fill"
+                            style={{
+                              width: `${state.score}%`,
+                            }}
+                          />
+                        </span>
+                      </span>
 
-                    <strong className="score">
-                      {state.score}%
-                    </strong>
-                  </div>
-                ))}
+                      <strong className="score">
+                        {state.score}%
+                      </strong>
+                    </button>
+                  ))}
               </div>
             )}
           </div>
@@ -436,37 +619,50 @@ export default function App() {
             ) : (
               <div className="ranking-list">
                 {worstStates.map((state, index) => (
-                  <div
+                  <button
+                    type="button"
                     className="ranking-row"
                     key={state.name}
+                    onClick={() => openState(state.name)}
                   >
                     <span className="rank">
                       {index + 1}
                     </span>
 
-                    <div className="ranking-state">
+                    <span className="ranking-state">
                       <strong>{state.name}</strong>
 
-                      <div className="score-bar">
-                        <div
+                      <span className="score-bar">
+                        <span
                           className="score-fill"
                           style={{
                             width: `${state.score}%`,
                           }}
                         />
-                      </div>
-                    </div>
+                      </span>
+                    </span>
 
                     <strong className="score">
                       {state.score}%
                     </strong>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
           </div>
         </section>
       </div>
+
+      {selectedState && (
+        <StateScorecard
+          state={selectedState}
+          weights={weights}
+          rank={
+            rankByState.get(selectedState.name) ?? 0
+          }
+          onClose={() => setSelectedStateName(null)}
+        />
+      )}
     </main>
   );
 }
