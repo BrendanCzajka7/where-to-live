@@ -27,7 +27,6 @@ export function RoomPanel({
   status,
   room,
   previewRoom,
-  userId,
   error,
   onCreateRoom,
   onJoinRoom,
@@ -49,41 +48,40 @@ export function RoomPanel({
   const [selectedIcon, setSelectedIcon] =
     useState("🌲");
 
-  const [copied, setCopied] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] =
     useState(false);
 
+
+
   useEffect(() => {
   if (!previewRoom) return;
+
+  const users = previewRoom.users ?? [];
+
+  if (users.length >= 4) {
+    setJoinStep("code");
+    return;
+  }
 
   const icons = ["🌲", "🏔️", "🌊", "🌵"];
 
   const availableIcon = icons.find(
     (icon) =>
-      !previewRoom.users.some(
-        (user) => user.icon === icon,
-      ),
+      !users.some((user) => user.icon === icon),
   );
 
   if (availableIcon) {
     setSelectedIcon(availableIcon);
   }
-}, [previewRoom]);
 
+  setJoinStep("details");
+}, [previewRoom]);
 
   useEffect(() => {
     if (room) {
       setIsOpen(false);
     }
   }, [room]);
-
-
-  useEffect(() => {
-    if (previewRoom) {
-      setJoinStep("details");
-    }
-  }, [previewRoom]);
-
 
   function openPanel(nextMode: "create" | "join") {
     setMode(nextMode);
@@ -144,18 +142,10 @@ export function RoomPanel({
 
 
   async function copyCode() {
-    if (!room) return;
+      if (!room) return;
 
-    await navigator.clipboard.writeText(
-      room.code,
-    );
-
-    setCopied(true);
-
-    window.setTimeout(() => {
-      setCopied(false);
-    }, 1500);
-  }
+      await navigator.clipboard.writeText(room.code);
+    }
 
 
   function leave() {
@@ -416,11 +406,13 @@ export function RoomPanel({
               )}
 
 
-              {error && (
-                <p className="room-error">
-                  {error}
-                </p>
-              )}
+              {error && <p className="room-error">{error}</p>}
+
+             {(previewRoom?.users?.length ?? 0) >= 4 && (
+              <p className="room-error">
+                Sorry, this room is full.
+              </p>
+            )}
 
 
               <button
@@ -431,7 +423,8 @@ export function RoomPanel({
                     ? !name.trim()
                     : joinStep === "code"
                     ? roomCode.length !== 4
-                    : !name.trim()
+                    : !name.trim() ||
+                      (previewRoom?.users?.length ?? 0) >= 4
                 }
               >
                 {mode === "create"
