@@ -429,6 +429,8 @@ function StateScorecard({
 }
 
 export default function App() {
+
+  
   const [personalWeights, setPersonalWeights] =
     useState<Weights>(initialWeights);
 

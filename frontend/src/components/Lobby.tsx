@@ -1,5 +1,5 @@
 import type { RoomState } from "../types/room";
-
+import { useEffect } from "react";
 type LobbyProps = {
   room: RoomState;
   userId: string;
@@ -13,6 +13,13 @@ export function Lobby({
   onStart,
   onLeave,
 }: LobbyProps) {
+  useEffect(() => {
+    setTimeout(() => {
+      const lobby = document.querySelector(".lobby");
+      console.log("viewport:", window.innerHeight);
+      console.log("lobby:", lobby?.getBoundingClientRect());
+    }, 100);
+  }, []);
   const isHost = room.hostId === userId;
 
   async function copyCode() {
