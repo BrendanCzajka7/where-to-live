@@ -1,0 +1,313 @@
+import { useState } from "react";
+import type {
+  ConnectionStatus,
+  RoomState,
+} from "../types/room";
+
+type RoomPanelProps = {
+  status: ConnectionStatus;
+  room: RoomState | null;
+  userId: string | null;
+  error: string | null;
+  onCreateRoom: (name: string) => void;
+  onJoinRoom: (name: string, roomCode: string) => void;
+  onLeaveRoom: () => void;
+  onClearError: () => void;
+};
+
+export function RoomPanel({
+  status,
+  room,
+  userId,
+  error,
+  onCreateRoom,
+  onJoinRoom,
+  onLeaveRoom,
+  onClearError,
+}: RoomPanelProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [mode, setMode] = useState<"create" | "join">("create");
+  const [name, setName] = useState("");
+  const [roomCode, setRoomCode] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  function openPanel(nextMode: "create" | "join") {
+    setMode(nextMode);
+    onClearError();
+    setIsOpen(true);
+  }
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+
+    const cleanName = name.trim();
+
+    if (!cleanName) return;
+
+    if (mode === "create") {
+      onCreateRoom(cleanName);
+      return;
+    }
+
+    const cleanCode = roomCode.trim().toUpperCase();
+
+    if (cleanCode.length !== 4) return;
+
+    onJoinRoom(cleanName, cleanCode);
+  }
+
+  async function copyCode() {
+    if (!room) return;
+
+    await navigator.clipboard.writeText(room.code);
+    setCopied(true);
+
+    window.setTimeout(() => {
+      setCopied(false);
+    }, 1500);
+  }
+
+  function leave() {
+    onLeaveRoom();
+    setIsOpen(false);
+    setName("");
+    setRoomCode("");
+  }
+
+  if (room) {
+    return (
+      <>
+        <button
+          type="button"
+          className="room-status-button"
+          onClick={() => setIsOpen(true)}
+        >
+          <span className="room-live-dot" />
+          <span>
+            <strong>ROOM {room.code}</strong>
+            <small>
+              {room.users.length}{" "}
+              {room.users.length === 1 ? "person" : "people"}
+            </small>
+          </span>
+        </button>
+
+        {isOpen && (
+          <div
+            className="room-backdrop"
+            onMouseDown={() => setIsOpen(false)}
+          >
+            <section
+              className="room-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="room-dialog-title"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <div className="room-dialog-header">
+                <div>
+                  <p className="section-kicker">GROUP ROOM</p>
+                  <h2 id="room-dialog-title">{room.code}</h2>
+                </div>
+
+                <button
+                  type="button"
+                  className="room-close"
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Close room details"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="room-members">
+                <span className="room-label">
+                  {room.users.length}{" "}
+                  {room.users.length === 1 ? "person" : "people"}
+                </span>
+
+                {room.users.map((user) => (
+                  <div className="room-member" key={user.id}>
+                    <span className="member-dot" />
+
+                    <strong>{user.name}</strong>
+
+                    {user.id === userId && <span>You</span>}
+                  </div>
+                ))}
+              </div>
+
+              <div className="room-dialog-actions">
+                <button
+                  type="button"
+                  className="room-secondary-button"
+                  onClick={copyCode}
+                >
+                  {copied ? "Copied" : "Copy room code"}
+                </button>
+
+                <button
+                  type="button"
+                  className="room-leave-button"
+                  onClick={leave}
+                >
+                  Leave room
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="room-actions">
+        <span
+          className={`connection-indicator ${status}`}
+          title={
+            status === "connected"
+              ? "Collaboration available"
+              : "Collaboration unavailable"
+          }
+        />
+
+        <button
+          type="button"
+          className="room-primary-button"
+          disabled={status !== "connected"}
+          onClick={() => openPanel("create")}
+        >
+          Start a room
+        </button>
+
+        <button
+          type="button"
+          className="room-secondary-button"
+          disabled={status !== "connected"}
+          onClick={() => openPanel("join")}
+        >
+          Join a room
+        </button>
+      </div>
+
+      {status === "unavailable" && (
+        <span className="collaboration-offline">
+          Collaboration temporarily unavailable
+        </span>
+      )}
+
+      {isOpen && (
+        <div
+          className="room-backdrop"
+          onMouseDown={() => setIsOpen(false)}
+        >
+          <section
+            className="room-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="room-dialog-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="room-dialog-header">
+              <div>
+                <p className="section-kicker">COLLABORATE</p>
+                <h2 id="room-dialog-title">
+                  {mode === "create"
+                    ? "Start a room"
+                    : "Join a room"}
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                className="room-close"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="room-tabs">
+              <button
+                type="button"
+                className={mode === "create" ? "active" : ""}
+                onClick={() => {
+                  setMode("create");
+                  onClearError();
+                }}
+              >
+                Create
+              </button>
+
+              <button
+                type="button"
+                className={mode === "join" ? "active" : ""}
+                onClick={() => {
+                  setMode("join");
+                  onClearError();
+                }}
+              >
+                Join
+              </button>
+            </div>
+
+            <form className="room-form" onSubmit={submit}>
+              <label>
+                Your name
+                <input
+                  type="text"
+                  maxLength={30}
+                  value={name}
+                  onChange={(event) =>
+                    setName(event.target.value)
+                  }
+                  placeholder="Alice"
+                  autoFocus
+                />
+              </label>
+
+              {mode === "join" && (
+                <label>
+                  Room code
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={roomCode}
+                    onChange={(event) =>
+                      setRoomCode(
+                        event.target.value
+                          .toUpperCase()
+                          .replace(/[^A-Z0-9]/g, ""),
+                      )
+                    }
+                    placeholder="HSZ8"
+                    className="room-code-input"
+                  />
+                </label>
+              )}
+
+              {error && <p className="room-error">{error}</p>}
+
+              <button
+                type="submit"
+                className="room-submit-button"
+                disabled={
+                  !name.trim() ||
+                  (mode === "join" &&
+                    roomCode.trim().length !== 4)
+                }
+              >
+                {mode === "create"
+                  ? "Create room"
+                  : "Join room"}
+              </button>
+            </form>
+          </section>
+        </div>
+      )}
+    </>
+  );
+}

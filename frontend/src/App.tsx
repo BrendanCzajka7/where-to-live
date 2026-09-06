@@ -1,8 +1,20 @@
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { geoAlbersUsa, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
-import type { Feature, FeatureCollection, Geometry } from "geojson";
-import type { GeometryCollection, Topology } from "topojson-specification";
+import type {
+  Feature,
+  FeatureCollection,
+  Geometry,
+} from "geojson";
+import type {
+  GeometryCollection,
+  Topology,
+} from "topojson-specification";
 import us from "us-atlas/states-10m.json";
 
 import {
@@ -11,6 +23,8 @@ import {
   type Criterion,
   type StateData,
 } from "./data/states";
+import { RoomPanel } from "./components/RoomPanel";
+import { useRoomSocket } from "./hooks/useRoomSocket";
 
 type Weights = Record<Criterion, number>;
 
@@ -96,6 +110,18 @@ function getDirectionalLabels(criterion: Criterion) {
   }
 }
 
+function getDirectionalValueLabel(
+  criterion: Criterion,
+  value: number,
+) {
+  if (value === 0) return "Any";
+
+  const [left, right] = getDirectionalLabels(criterion);
+  const direction = value < 0 ? left : right;
+
+  return `${Math.abs(Math.round(value * 10) / 10)} ${direction}`;
+}
+
 function getDirectionalMatch(
   stateValue: number,
   preference: number,
@@ -126,11 +152,13 @@ function StateScorecard({
   state,
   weights,
   rank,
+  isRoom,
   onClose,
 }: {
   state: RankedState;
   weights: Weights;
   rank: number;
+  isRoom: boolean;
   onClose: () => void;
 }) {
   const breakdown = criteria
@@ -190,7 +218,11 @@ function StateScorecard({
 
         <div className="scorecard-breakdown">
           <div className="scorecard-section-heading">
-            <h3>Your match breakdown</h3>
+            <h3>
+              {isRoom
+                ? "Group match breakdown"
+                : "Your match breakdown"}
+            </h3>
             <span>Selected priorities</span>
           </div>
 
@@ -212,7 +244,7 @@ function StateScorecard({
         </div>
 
         <p className="scorecard-note">
-          Breakdown only includes preferences you selected.
+          Breakdown only includes selected preferences.
           Stronger preferences have more influence on the overall score.
         </p>
       </aside>
@@ -221,21 +253,80 @@ function StateScorecard({
 }
 
 export default function App() {
-  const [weights, setWeights] = useState<Weights>(initialWeights);
+  const [personalWeights, setPersonalWeights] =
+    useState<Weights>(initialWeights);
+
   const [hoveredState, setHoveredState] = useState<string | null>(
     null,
   );
+
   const [selectedStateName, setSelectedStateName] = useState<
     string | null
   >(null);
 
-  const hasPreferences = Object.values(weights).some(
+  const [selectedGroupCriterion, setSelectedGroupCriterion] =
+    useState<Criterion | null>(null);
+
+  const previousUserId = useRef<string | null>(null);
+
+  const {
+    status,
+    room,
+    userId,
+    error,
+    createRoom,
+    joinRoom,
+    updatePreferences,
+    leaveRoom,
+    clearError,
+  } = useRoomSocket();
+
+  const isRoom = room !== null;
+
+  const displayWeights: Weights = room
+    ? room.combinedPreferences
+    : personalWeights;
+
+  /*
+   * A successful room entry starts this user's room
+   * preferences from zero instead of carrying solo choices in.
+   */
+  useEffect(() => {
+    if (userId && previousUserId.current !== userId) {
+      setPersonalWeights(initialWeights);
+      setSelectedStateName(null);
+      setSelectedGroupCriterion(null);
+    }
+
+    previousUserId.current = userId;
+  }, [userId]);
+
+  /*
+   * Send the current user's room preferences after a short
+   * debounce while sliders are being moved.
+   */
+  useEffect(() => {
+    if (!room || !userId) return;
+
+    const timer = window.setTimeout(() => {
+      updatePreferences(personalWeights);
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    personalWeights,
+    room?.code,
+    userId,
+    updatePreferences,
+  ]);
+
+  const hasPreferences = Object.values(displayWeights).some(
     (value) => value !== 0,
   );
 
   const rankedStates = useMemo<RankedState[]>(() => {
     const totalWeight = criteria.reduce((total, criterion) => {
-      const value = weights[criterion.key] ?? 0;
+      const value = displayWeights[criterion.key] ?? 0;
       return total + Math.abs(value) ** 2;
     }, 0);
 
@@ -251,7 +342,7 @@ export default function App() {
         const weightedTotal = criteria.reduce(
           (total, criterion) => {
             const key = criterion.key;
-            const preference = weights[key] ?? 0;
+            const preference = displayWeights[key] ?? 0;
             const stateValue = state[key];
 
             if (directionalCriteria.has(key)) {
@@ -280,7 +371,7 @@ export default function App() {
         };
       })
       .sort((a, b) => b.score - a.score);
-  }, [weights]);
+  }, [displayWeights]);
 
   const scoreByState = useMemo(
     () =>
@@ -321,24 +412,50 @@ export default function App() {
     ? stateByName.get(selectedStateName) ?? null
     : null;
 
+  const selectedCriterion = selectedGroupCriterion
+    ? criteria.find(
+        (criterion) =>
+          criterion.key === selectedGroupCriterion,
+      ) ?? null
+    : null;
+
   function updateWeight(
     criterion: Criterion,
     value: number,
   ) {
-    setWeights((current) => ({
+    setPersonalWeights((current) => ({
       ...current,
       [criterion]: value,
     }));
   }
 
   function resetWeights() {
-    setWeights(initialWeights);
+    setPersonalWeights(initialWeights);
     setSelectedStateName(null);
+  }
+
+  function handleLeaveRoom() {
+    leaveRoom();
+    setPersonalWeights(initialWeights);
+    setSelectedStateName(null);
+    setSelectedGroupCriterion(null);
   }
 
   function openState(name: string) {
     if (!hasPreferences) return;
+
     setSelectedStateName(name);
+  }
+
+  function formatGroupValue(
+    criterion: Criterion,
+    value: number,
+  ) {
+    if (directionalCriteria.has(criterion)) {
+      return getDirectionalValueLabel(criterion, value);
+    }
+
+    return String(Math.round(value * 10) / 10);
   }
 
   return (
@@ -352,21 +469,41 @@ export default function App() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="reset-button"
-          onClick={resetWeights}
-          disabled={!hasPreferences}
-        >
-          Reset preferences
-        </button>
+        <div className="header-actions">
+          <RoomPanel
+            status={status}
+            room={room}
+            userId={userId}
+            error={error}
+            onCreateRoom={createRoom}
+            onJoinRoom={joinRoom}
+            onLeaveRoom={handleLeaveRoom}
+            onClearError={clearError}
+          />
+
+          <button
+            type="button"
+            className="reset-button"
+            onClick={resetWeights}
+            disabled={
+              !Object.values(personalWeights).some(
+                (value) => value !== 0,
+              )
+            }
+          >
+            Reset preferences
+          </button>
+        </div>
       </header>
 
       <div className="dashboard">
         <section className="panel preferences">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">PREFERENCES</p>
+              <p className="section-kicker">
+                {isRoom ? "YOUR PREFERENCES" : "PREFERENCES"}
+              </p>
+
               <h2>What matters to you?</h2>
             </div>
           </div>
@@ -376,7 +513,8 @@ export default function App() {
               const isDirectional =
                 directionalCriteria.has(criterion.key);
 
-              const value = weights[criterion.key] ?? 0;
+              const value =
+                personalWeights[criterion.key] ?? 0;
 
               if (isDirectional) {
                 const [leftLabel, rightLabel] =
@@ -467,18 +605,27 @@ export default function App() {
         <section className="panel map-panel">
           <div className="map-header">
             <div>
-              <p className="section-kicker">YOUR MATCHES</p>
+              <p className="section-kicker">
+                {isRoom ? "GROUP MATCHES" : "YOUR MATCHES"}
+              </p>
+
               <h2>
                 {hasPreferences
-                  ? "Best states for you"
-                  : "Start with your priorities"}
+                  ? isRoom
+                    ? "Best states for your group"
+                    : "Best states for you"
+                  : isRoom
+                    ? "Waiting for group preferences"
+                    : "Start with your priorities"}
               </h2>
             </div>
 
             <span className="map-hint">
               {hasPreferences
                 ? "Click a state for details"
-                : "Move a slider to begin"}
+                : isRoom
+                  ? "Move a slider to begin"
+                  : "Move a slider to begin"}
             </span>
           </div>
 
@@ -533,6 +680,56 @@ export default function App() {
             )}
           </div>
 
+          {room && (
+            <div className="group-preferences">
+              <div className="group-preferences-heading">
+                <span>GROUP PREFERENCES</span>
+                <small>Click a preference to see everyone's input</small>
+              </div>
+
+              <div className="group-preference-list">
+                {criteria
+                  .filter(
+                    (criterion) =>
+                      room.combinedPreferences[
+                        criterion.key
+                      ] !== 0,
+                  )
+                  .map((criterion) => (
+                    <button
+                      type="button"
+                      className="group-preference-chip"
+                      key={criterion.key}
+                      onClick={() =>
+                        setSelectedGroupCriterion(
+                          criterion.key,
+                        )
+                      }
+                    >
+                      <span>{criterion.label}</span>
+
+                      <strong>
+                        {formatGroupValue(
+                          criterion.key,
+                          room.combinedPreferences[
+                            criterion.key
+                          ],
+                        )}
+                      </strong>
+                    </button>
+                  ))}
+
+                {!Object.values(
+                  room.combinedPreferences,
+                ).some((value) => value !== 0) && (
+                  <span className="group-preferences-empty">
+                    No group preferences yet
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="legend">
             {hasPreferences ? (
               <>
@@ -542,7 +739,9 @@ export default function App() {
               </>
             ) : (
               <span>
-                Your map will update as you choose what matters.
+                {isRoom
+                  ? "The map updates from your group's combined preferences."
+                  : "Your map will update as you choose what matters."}
               </span>
             )}
           </div>
@@ -552,7 +751,9 @@ export default function App() {
           <div className="ranking-section">
             <div className="ranking-heading">
               <div>
-                <p className="section-kicker">BEST FIT</p>
+                <p className="section-kicker">
+                  {isRoom ? "GROUP BEST FIT" : "BEST FIT"}
+                </p>
                 <h2>Top states</h2>
               </div>
 
@@ -561,7 +762,9 @@ export default function App() {
 
             {!hasPreferences ? (
               <p className="empty-ranking">
-                Choose at least one preference to rank the states.
+                {isRoom
+                  ? "Group rankings will appear as preferences are added."
+                  : "Choose at least one preference to rank the states."}
               </p>
             ) : (
               <div className="ranking-list">
@@ -605,7 +808,9 @@ export default function App() {
           <div className="ranking-section">
             <div className="ranking-heading">
               <div>
-                <p className="section-kicker">WORST FIT</p>
+                <p className="section-kicker">
+                  {isRoom ? "GROUP WORST FIT" : "WORST FIT"}
+                </p>
                 <h2>Lowest states</h2>
               </div>
 
@@ -645,8 +850,8 @@ export default function App() {
                     <strong className="score">
                       {state.score}%
                     </strong>
-                  </button>
-                ))}
+                    </button>
+                  ))}
               </div>
             )}
           </div>
@@ -656,12 +861,91 @@ export default function App() {
       {selectedState && (
         <StateScorecard
           state={selectedState}
-          weights={weights}
-          rank={
-            rankByState.get(selectedState.name) ?? 0
-          }
+          weights={displayWeights}
+          rank={rankByState.get(selectedState.name) ?? 0}
+          isRoom={isRoom}
           onClose={() => setSelectedStateName(null)}
         />
+      )}
+
+      {room && selectedCriterion && (
+        <div
+          className="contribution-backdrop"
+          onMouseDown={() =>
+            setSelectedGroupCriterion(null)
+          }
+        >
+          <section
+            className="contribution-dialog"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="contribution-header">
+              <div>
+                <p className="section-kicker">
+                  GROUP PREFERENCE
+                </p>
+                <h2>{selectedCriterion.label}</h2>
+              </div>
+
+              <button
+                type="button"
+                className="room-close"
+                onClick={() =>
+                  setSelectedGroupCriterion(null)
+                }
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="combined-value">
+              <span>Group average</span>
+              <strong>
+                {formatGroupValue(
+                  selectedCriterion.key,
+                  room.combinedPreferences[
+                    selectedCriterion.key
+                  ],
+                )}
+              </strong>
+            </div>
+
+            <div className="contribution-list">
+              {room.users.map((user) => {
+                const value =
+                  user.preferences[selectedCriterion.key];
+
+                return (
+                  <div
+                    className="contribution-row"
+                    key={user.id}
+                  >
+                    <div>
+                      <span className="member-dot" />
+                      <strong>{user.name}</strong>
+
+                      {user.id === userId && (
+                        <small>You</small>
+                      )}
+                    </div>
+
+                    <strong>
+                      {formatGroupValue(
+                        selectedCriterion.key,
+                        value,
+                      )}
+                    </strong>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
       )}
     </main>
   );
