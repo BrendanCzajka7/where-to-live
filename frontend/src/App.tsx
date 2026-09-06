@@ -677,11 +677,9 @@ if (room?.status === "lobby" && userId) {
         <section className="panel map-panel">
           <div className="map-header">
             <div>
-              {hasPreferences && (
-                <h2>
-                  {isRoom ? "Group matches" : "Matches"}
-                </h2>
-              )}
+              <h2>
+                {isRoom ? "Group matches" : "Matches"}
+              </h2>
             </div>
 
             {!hasPreferences && (
@@ -793,13 +791,9 @@ if (room?.status === "lobby" && userId) {
           )}
 
           <div className="legend">
-            {hasPreferences && (
-              <>
-                <span>Lower match</span>
-                <div className="legend-gradient" />
-                <span>Higher match</span>
-              </>
-            )}
+            <span>Lower match</span>
+            <div className="legend-gradient" />
+            <span>Higher match</span>
           </div>
         </section>
 
