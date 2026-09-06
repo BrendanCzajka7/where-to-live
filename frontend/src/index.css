@@ -1539,3 +1539,30 @@ input[type="range"] {
   background: #ede9fe;
   box-shadow: 0 0 0 2px rgb(124 58 237 / 0.12);
 }
+
+.ranking-reasons {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.ranking-reasons span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 22px;
+  height: 22px;
+
+  border-radius: 50%;
+
+  font-size: 12px;
+}
+
+.reason-positive {
+  background: #dcfce7;
+}
+
+.reason-negative {
+  background: #fee2e2;
+}

@@ -42,6 +42,22 @@ type MapFeature = Feature<Geometry, MapProperties>;
 const WIDTH = 975;
 const HEIGHT = 610;
 
+const criterionIcons: Record<Criterion, string> = {
+  affordability: "💰",
+  safety: "🛡️",
+  nature: "🌲",
+  temperature: "🌡️",
+  humidity: "💧",
+  mountains: "⛰️",
+  density: "🏙️",
+  jobs: "💼",
+  coast: "🌊",
+  politics: "⚖️",
+  healthcare: "🏥",
+  schools: "🎓",
+  weatherSeverity: "⛈️",
+};
+
 const directionalCriteria = new Set<Criterion>([
   "temperature",
   "humidity",
@@ -460,46 +476,31 @@ export default function App() {
     return String(Math.round(value * 10) / 10);
   }
 
-  function getTopReasons(
+ function getTopReasons(
   state: StateData,
-  weights: Weights,
-  limit = 3,
+  positive: boolean = true,
 ) {
   return criteria
     .map((criterion) => {
-      const importance =
-        Math.abs(weights[criterion.key] ?? 0) ** 2;
+      const preference = displayWeights[criterion.key] ?? 0;
 
-      if (importance === 0) return null;
+      if (preference === 0) return null;
 
       const match = getCriterionMatch(
         state,
         criterion.key,
-        weights[criterion.key],
+        preference,
       );
 
       return {
-        label: criterion.label,
-        score: match * importance,
-        match,
+        key: criterion.key,
+        score: positive ? match : 100 - match,
       };
     })
-    .filter(Boolean)
-    .sort((a, b) => b!.score - a!.score)
-    .slice(0, limit)
-    .map((item) => item!.label);
+    .filter((item) => item !== null)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
 }
-
-  if (room?.status === "lobby" && userId) {
-    return (
-      <Lobby
-        room={room}
-        userId={userId}
-        onStart={startRoom}
-        onLeave={handleLeaveRoom}
-      />
-    );
-  }
 
   return (
     <main className="app">
@@ -810,18 +811,34 @@ export default function App() {
                         {index + 1}
                       </span>
 
-                      <span className="ranking-state">
-                        <strong>{state.name}</strong>
+                     <span className="ranking-state">
+                      <strong>{state.name}</strong>
 
-                        <span className="score-bar">
-                          <span
-                            className="score-fill"
-                            style={{
-                              width: `${state.score}%`,
-                            }}
-                          />
-                        </span>
+                      <span className="score-bar">
+                        <span
+                          className="score-fill"
+                          style={{
+                            width: `${state.score}%`,
+                          }}
+                        />
                       </span>
+
+                      <span className="ranking-reasons">
+                        {getTopReasons(state).map((item) => (
+                          <span
+                            className="reason-positive"
+                            key={item.key}
+                            title={
+                              criteria.find(
+                                (c) => c.key === item.key,
+                              )?.label
+                            }
+                          >
+                            {criterionIcons[item.key]}
+                          </span>
+                        ))}
+                      </span>
+                    </span>
 
                       <strong className="score">
                         {state.score}%
@@ -873,6 +890,22 @@ export default function App() {
                             width: `${state.score}%`,
                           }}
                         />
+                      </span>
+
+                      <span className="ranking-reasons">
+                        {getTopReasons(state, false).map((item) => (
+                          <span
+                            className="reason-negative"
+                            key={item.key}
+                            title={
+                              criteria.find(
+                                (c) => c.key === item.key,
+                              )?.label
+                            }
+                          >
+                            {criterionIcons[item.key]}
+                          </span>
+                        ))}
                       </span>
                     </span>
 
