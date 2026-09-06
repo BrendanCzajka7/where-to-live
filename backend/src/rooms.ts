@@ -41,10 +41,14 @@ function generateRoomCode(): string {
   }
 }
 
-export function createUser(name: string): RoomUser {
+export function createUser(
+  name: string,
+  icon: string,
+): RoomUser {
   return {
     id: randomUUID(),
     name,
+    icon,
     preferences: emptyPreferences(),
   };
 }
@@ -146,6 +150,7 @@ export function getPublicRoomState(
     users: Array.from(room.users.values()).map((user) => ({
       id: user.id,
       name: user.name,
+      icon: user.icon,
       preferences: { ...user.preferences },
     })),
     combinedPreferences: getCombinedPreferences(room),

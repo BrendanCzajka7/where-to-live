@@ -1286,3 +1286,237 @@ input[type="range"] {
     gap: 2px;
   }
 }
+
+/* LOBBY */
+
+.lobby {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 32px 36px;
+  background:
+    radial-gradient(
+      circle at 50% 40%,
+      #ffffff 0%,
+      #f5f3ff 45%,
+      #eef2ff 100%
+    );
+}
+
+.lobby::before {
+  content: "WHERE SHOULD WE LIVE?";
+  position: absolute;
+  top: 24px;
+  left: 32px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.lobby-leave {
+  position: absolute;
+  top: 18px;
+  right: 24px;
+  border: 1px solid #dbe2ea;
+  border-radius: 9px;
+  padding: 8px 13px;
+  background: rgb(255 255 255 / 0.7);
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lobby-leave:hover {
+  background: #ffffff;
+  color: #334155;
+}
+
+.lobby-room-code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-top: 34px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.lobby-room-code span {
+  color: #8b5cf6;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.lobby-room-code strong {
+  color: #312e81;
+  font-size: clamp(38px, 5vw, 58px);
+  line-height: 1;
+  letter-spacing: 0.14em;
+}
+
+.lobby-players {
+  flex: 1;
+  width: min(850px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 3vw, 36px);
+}
+
+.lobby-player {
+  width: 160px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.lobby-avatar {
+  width: 126px;
+  height: 126px;
+  display: grid;
+  place-items: center;
+  border: 3px solid #ffffff;
+  border-radius: 32px;
+  background: #ffffff;
+  box-shadow:
+    0 10px 30px rgb(79 70 229 / 0.12),
+    0 2px 6px rgb(15 23 42 / 0.06);
+  font-size: 56px;
+}
+
+.lobby-player > strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: #1e293b;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lobby-host {
+  margin-top: -5px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #ede9fe;
+  color: #7c3aed;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.lobby-player-empty {
+  opacity: 0.45;
+}
+
+.lobby-avatar-empty {
+  border: 2px dashed #a5b4fc;
+  background: rgb(255 255 255 / 0.35);
+  box-shadow: none;
+  color: #818cf8;
+  font-size: 32px;
+  font-weight: 300;
+}
+
+.lobby-bottom {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lobby-start {
+  min-width: 190px;
+  border: 0;
+  border-radius: 12px;
+  padding: 14px 32px;
+  background: #6d5dfc;
+  box-shadow: 0 8px 22px rgb(109 93 252 / 0.25);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.lobby-start:hover {
+  background: #5b4bea;
+  transform: translateY(-1px);
+}
+
+.lobby-waiting {
+  min-width: 190px;
+  border-radius: 12px;
+  padding: 14px 32px;
+  background: rgb(255 255 255 / 0.55);
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .lobby {
+    padding: 76px 18px 24px;
+  }
+
+  .lobby::before {
+    left: 18px;
+  }
+
+  .lobby-players {
+    align-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 40px 0;
+  }
+
+  .lobby-player {
+    width: 120px;
+  }
+
+  .lobby-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 24px;
+    font-size: 42px;
+  }
+}
+
+.icon-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.icon-option {
+  height: 56px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 26px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.icon-option:hover {
+  border-color: #a78bfa;
+  background: #f5f3ff;
+  transform: translateY(-1px);
+}
+
+.icon-option-selected {
+  border-color: #7c3aed;
+  background: #ede9fe;
+  box-shadow: 0 0 0 2px rgb(124 58 237 / 0.12);
+}

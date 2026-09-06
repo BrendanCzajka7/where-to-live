@@ -25,6 +25,7 @@ import {
 } from "./data/states";
 import { RoomPanel } from "./components/RoomPanel";
 import { useRoomSocket } from "./hooks/useRoomSocket";
+import { Lobby } from "./components/Lobby";
 
 type Weights = Record<Criterion, number>;
 
@@ -276,6 +277,7 @@ export default function App() {
     error,
     createRoom,
     joinRoom,
+    startRoom,
     updatePreferences,
     leaveRoom,
     clearError,
@@ -458,6 +460,17 @@ export default function App() {
     return String(Math.round(value * 10) / 10);
   }
 
+  if (room?.status === "lobby" && userId) {
+    return (
+      <Lobby
+        room={room}
+        userId={userId}
+        onStart={startRoom}
+        onLeave={handleLeaveRoom}
+      />
+    );
+  }
+
   return (
     <main className="app">
       <header className="header">
@@ -519,6 +532,7 @@ export default function App() {
               if (isDirectional) {
                 const [leftLabel, rightLabel] =
                   getDirectionalLabels(criterion.key);
+                  
 
                 return (
                   <div

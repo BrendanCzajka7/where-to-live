@@ -116,26 +116,33 @@ export function useRoomSocket() {
     return true;
   }, []);
 
-  const createRoom = useCallback(
-    (name: string) => {
+  const createRoom = useCallback((name: string, icon: string) => {
       setError(null);
 
       return send({
         type: "create_room",
         name,
+        icon,
       });
     },
     [send],
   );
 
+    const startRoom = useCallback(() => {
+      send({
+        type: "start_room",
+      });
+    }, [send]);
+
   const joinRoom = useCallback(
-    (name: string, roomCode: string) => {
+  (name: string, roomCode: string, icon: string) => {
       setError(null);
 
       return send({
         type: "join_room",
         name,
-        roomCode: roomCode.trim().toUpperCase(),
+        roomCode,
+        icon,
       });
     },
     [send],
@@ -168,6 +175,7 @@ export function useRoomSocket() {
     error,
     createRoom,
     joinRoom,
+    startRoom,
     updatePreferences,
     leaveRoom,
     clearError,

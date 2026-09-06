@@ -9,8 +9,8 @@ type RoomPanelProps = {
   room: RoomState | null;
   userId: string | null;
   error: string | null;
-  onCreateRoom: (name: string) => void;
-  onJoinRoom: (name: string, roomCode: string) => void;
+  onCreateRoom: (name: string, icon: string) => void;
+  onJoinRoom: (name: string, roomCode: string, icon: string) => void;
   onLeaveRoom: () => void;
   onClearError: () => void;
 };
@@ -31,6 +31,8 @@ export function RoomPanel({
   const [roomCode, setRoomCode] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const [selectedIcon, setSelectedIcon] = useState("🌲");
+
   function openPanel(nextMode: "create" | "join") {
     setMode(nextMode);
     onClearError();
@@ -45,7 +47,7 @@ export function RoomPanel({
     if (!cleanName) return;
 
     if (mode === "create") {
-      onCreateRoom(cleanName);
+      onCreateRoom(cleanName, selectedIcon);
       return;
     }
 
@@ -53,7 +55,7 @@ export function RoomPanel({
 
     if (cleanCode.length !== 4) return;
 
-    onJoinRoom(cleanName, cleanCode);
+    onJoinRoom(cleanName, cleanCode, selectedIcon);
   }
 
   async function copyCode() {
@@ -267,7 +269,25 @@ export function RoomPanel({
                   placeholder="Alice"
                   autoFocus
                 />
-              </label>
+               </label>
+
+              <div className="icon-picker">
+                {["🌲", "🏔️", "🌊", "🌵"].map((icon) => (
+                  <button
+                    type="button"
+                    key={icon}
+                    className={
+                      selectedIcon === icon
+                        ? "icon-option icon-option-selected"
+                        : "icon-option"
+                    }
+                    aria-pressed={selectedIcon === icon}
+                    onClick={() => setSelectedIcon(icon)}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
 
               {mode === "join" && (
                 <label>

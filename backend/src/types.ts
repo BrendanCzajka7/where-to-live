@@ -21,6 +21,7 @@ export type Preferences = Record<PreferenceKey, number>;
 export type RoomUser = {
   id: string;
   name: string;
+  icon: string;
   preferences: Preferences;
 };
 
@@ -43,11 +44,13 @@ export type ClientMessage =
   | {
       type: "create_room";
       name: string;
+      icon: string;
     }
   | {
       type: "join_room";
       roomCode: string;
       name: string;
+      icon: string;
     }
   | {
       type: "update_preferences";
@@ -59,7 +62,6 @@ export type ClientMessage =
   | {
       type: "start_room";
     };
-
 export type ServerMessage =
   | {
       type: "room_joined";

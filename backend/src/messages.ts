@@ -23,6 +23,13 @@ const directionalPreferenceKeys = new Set([
   "politics",
 ]);
 
+function isValidIcon(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    ["🌲", "🏔️", "🌊", "🌵"].includes(value)
+  );
+}
+
 function isValidName(value: unknown): value is string {
   return (
     typeof value === "string" &&
@@ -100,17 +107,24 @@ export function parseClientMessage(
 
   switch (message.type) {
     case "create_room":
-      if (!isValidName(message.name)) return null;
+      if (
+        !isValidName(message.name) ||
+        !isValidIcon(message.icon)
+      ) {
+        return null;
+      }
 
       return {
         type: "create_room",
         name: message.name.trim(),
+        icon: message.icon,
       };
 
     case "join_room":
       if (
         !isValidName(message.name) ||
-        !isValidRoomCode(message.roomCode)
+        !isValidRoomCode(message.roomCode) ||
+        !isValidIcon(message.icon)
       ) {
         return null;
       }
@@ -119,6 +133,7 @@ export function parseClientMessage(
         type: "join_room",
         roomCode: message.roomCode.toUpperCase(),
         name: message.name.trim(),
+        icon: message.icon,
       };
 
     case "update_preferences":

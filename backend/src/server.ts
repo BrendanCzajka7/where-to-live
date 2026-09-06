@@ -100,7 +100,7 @@ wss.on("connection", (socket) => {
           return;
         }
 
-        const user = createUser(message.name);
+        const user = createUser(message.name, message.icon);
         const room = createRoom(user);
 
         session.userId = user.id;
@@ -125,7 +125,7 @@ wss.on("connection", (socket) => {
           return;
         }
 
-        const user = createUser(message.name);
+        const user = createUser(message.name, message.icon);
         const room = joinRoom(message.roomCode, user);
 
         if (!room) {
