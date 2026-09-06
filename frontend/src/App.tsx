@@ -215,6 +215,34 @@ function getCriterionMatch(
   return Math.round(state[criterion]);
 }
 
+function scoreStateForWeights(
+  state: StateData,
+  weights: Weights,
+): number {
+  const totalWeight = criteria.reduce((total, criterion) => {
+    const value = weights[criterion.key] ?? 0;
+    return total + Math.abs(value) ** 2;
+  }, 0);
+
+  if (totalWeight === 0) return 0;
+
+  const weightedTotal = criteria.reduce((total, criterion) => {
+    const key = criterion.key;
+    const preference = weights[key] ?? 0;
+    const importance = Math.abs(preference) ** 2;
+
+    if (importance === 0) return total;
+
+    const match = directionalCriteria.has(key)
+      ? getDirectionalMatch(state[key], preference)
+      : state[key];
+
+    return total + match * importance;
+  }, 0);
+
+  return Math.round(weightedTotal / totalWeight);
+}
+
 function StateScorecard({
   state,
   weights,
@@ -387,6 +415,9 @@ export default function App() {
   const [hoveredState, setHoveredState] = useState<string | null>(
     null,
   );
+  const [hoveredPlayerId, setHoveredPlayerId] = useState<
+  string | null
+>(null);
 
   const [selectedStateName, setSelectedStateName] = useState<
     string | null
@@ -503,6 +534,87 @@ export default function App() {
       })
       .sort((a, b) => b.score - a.score);
   }, [displayWeights]);
+
+  const playerMarkers = useMemo(() => {
+  if (!room) return [];
+
+  const rawMarkers = room.users.flatMap((user) => {
+    const hasUserPreferences = Object.values(user.preferences).some(
+      (value) => value !== 0,
+    );
+
+    if (!hasUserPreferences) return [];
+
+    const rankedForUser = states
+      .map((state) => ({
+        state,
+        score: scoreStateForWeights(state, user.preferences),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const favorite = rankedForUser[0];
+
+    const mapFeature = stateFeatures.find(
+      (feature) =>
+        (feature as MapFeature).properties.name === favorite.state.name,
+    ) as MapFeature | undefined;
+
+    if (!mapFeature) return [];
+
+    const center = pathGenerator.centroid(mapFeature);
+
+    if (
+      !Number.isFinite(center[0]) ||
+      !Number.isFinite(center[1])
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        id: user.id,
+        name: user.name,
+        icon: user.icon,
+        stateName: favorite.state.name,
+        score: favorite.score,
+        x: center[0],
+        y: center[1],
+      },
+    ];
+  });
+
+  const grouped = new Map<string, typeof rawMarkers>();
+
+  for (const marker of rawMarkers) {
+    const group = grouped.get(marker.stateName) ?? [];
+    group.push(marker);
+    grouped.set(marker.stateName, group);
+  }
+
+  return rawMarkers.map((marker) => {
+    const group = grouped.get(marker.stateName) ?? [marker];
+    const index = group.findIndex((item) => item.id === marker.id);
+
+    const offsets = [
+      [0, 0],
+      [-18, -14],
+      [18, -14],
+      [-18, 14],
+      [18, 14],
+    ];
+
+    const [offsetX, offsetY] =
+      group.length === 1
+        ? offsets[0]
+        : offsets[(index % (offsets.length - 1)) + 1];
+
+    return {
+      ...marker,
+      x: marker.x + offsetX,
+      y: marker.y + offsetY,
+    };
+  });
+}, [room]);
 
   const scoreByState = useMemo(
     () =>
@@ -784,6 +896,65 @@ if (room?.status === "lobby" && userId) {
                     }
                     onClick={() => openState(name)}
                   />
+                );
+              })}
+              {playerMarkers.map((marker) => {
+                const isHovered = hoveredPlayerId === marker.id;
+
+                return (
+                  <g
+                    key={marker.id}
+                    className="player-map-marker"
+                    style={{
+                      transform: `translate(${marker.x}px, ${marker.y}px)`,
+                    }}
+                    onMouseEnter={() => setHoveredPlayerId(marker.id)}
+                    onMouseLeave={() => setHoveredPlayerId(null)}
+                    onClick={() => openState(marker.stateName)}
+                  >
+                    {isHovered && (
+                      <g className="player-marker-tooltip">
+                        <rect
+                          x="-125"
+                          y="-105"
+                          width="250"
+                          height="70"
+                          rx="15"
+                        />
+
+                        <text
+                          x="0"
+                          y="-78"
+                          textAnchor="middle"
+                          className="player-tooltip-name"
+                        >
+                          {marker.name}
+                        </text>
+
+                        <text
+                          x="0"
+                          y="-52"
+                          textAnchor="middle"
+                          className="player-tooltip-state"
+                        >
+                          {marker.stateName} · {marker.score}%
+                        </text>
+                      </g>
+                    )}
+
+                    <circle
+                      className="player-map-marker-circle"
+                      r="18"
+                    />
+
+                    <text
+                      className="player-map-marker-icon"
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                    >
+                      {marker.icon}
+                    </text>
+                  </g>
                 );
               })}
             </svg>

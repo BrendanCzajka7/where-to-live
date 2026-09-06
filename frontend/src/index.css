@@ -431,6 +431,58 @@ input[type="range"]::-moz-range-thumb {
   stroke-width: 2.5;
 }
 
+.player-map-marker {
+  cursor: pointer;
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.player-map-marker-circle {
+  fill: #ffffff;
+  stroke: #4f46e5;
+  stroke-width: 2.5px;
+  vector-effect: non-scaling-stroke;
+
+  filter: drop-shadow(0 3px 5px rgb(15 23 42 / 0.22));
+}
+
+.player-map-marker-icon {
+  font-size: 20px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.player-map-marker:hover .player-map-marker-circle {
+  stroke-width: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-map-marker {
+    transition: none;
+  }
+}
+
+.player-marker-tooltip {
+  pointer-events: none;
+}
+
+.player-marker-tooltip rect {
+  fill: #172033;
+  filter: drop-shadow(0 4px 8px rgb(15 23 42 / 0.24));
+}
+
+.player-tooltip-name {
+  fill: #ffffff;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.player-tooltip-state {
+  fill: #cbd5e1;
+  font-size: 17px;
+  font-weight: 650;
+}
+
+
 .map-tooltip {
   position: absolute;
   top: 12px;
