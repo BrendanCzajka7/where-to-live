@@ -166,39 +166,34 @@ export function RoomPanel({
   return (
     <>
       <div className="room-actions">
-        <span
-          className={`connection-indicator ${status}`}
-          title={
-            status === "connected"
-              ? "Collaboration available"
-              : "Collaboration unavailable"
-          }
-        />
+        {status === "connected" ? (
+            <>
+              <button
+                type="button"
+                className="room-primary-button"
+                onClick={() => openPanel("create")}
+              >
+                Create Room
+              </button>
 
-        <button
-          type="button"
-          className="room-primary-button"
-          disabled={status !== "connected"}
-          onClick={() => openPanel("create")}
-        >
-          Start a room
-        </button>
-
-        <button
-          type="button"
-          className="room-secondary-button"
-          disabled={status !== "connected"}
-          onClick={() => openPanel("join")}
-        >
-          Join a room
-        </button>
-      </div>
-
-      {status === "unavailable" && (
-        <span className="collaboration-offline">
-          Collaboration temporarily unavailable
-        </span>
-      )}
+              <button
+                type="button"
+                className="room-secondary-button"
+                onClick={() => openPanel("join")}
+              >
+                Join Room
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="room-secondary-button"
+              disabled
+            >
+              Multiplayer Offline
+            </button>
+          )}
+        </div>
 
       {isOpen && (
         <div

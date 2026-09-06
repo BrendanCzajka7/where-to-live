@@ -460,6 +460,36 @@ export default function App() {
     return String(Math.round(value * 10) / 10);
   }
 
+  function getTopReasons(
+  state: StateData,
+  weights: Weights,
+  limit = 3,
+) {
+  return criteria
+    .map((criterion) => {
+      const importance =
+        Math.abs(weights[criterion.key] ?? 0) ** 2;
+
+      if (importance === 0) return null;
+
+      const match = getCriterionMatch(
+        state,
+        criterion.key,
+        weights[criterion.key],
+      );
+
+      return {
+        label: criterion.label,
+        score: match * importance,
+        match,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b!.score - a!.score)
+    .slice(0, limit)
+    .map((item) => item!.label);
+}
+
   if (room?.status === "lobby" && userId) {
     return (
       <Lobby
@@ -473,16 +503,12 @@ export default function App() {
 
   return (
     <main className="app">
-      <header className="header">
-        <div>
-          <p className="eyebrow">STATE FINDER</p>
+      <header className="top-bar">
+        <div className="app-title">
           <h1>Where Should We Live?</h1>
-          <p className="subtitle">
-            Set your priorities. Find the states that fit your life.
-          </p>
         </div>
 
-        <div className="header-actions">
+        <div className="top-actions">
           <RoomPanel
             status={status}
             room={room}
@@ -490,36 +516,17 @@ export default function App() {
             error={error}
             onCreateRoom={createRoom}
             onJoinRoom={joinRoom}
-            onLeaveRoom={handleLeaveRoom}
+            onLeaveRoom={leaveRoom}
             onClearError={clearError}
           />
-
-          <button
-            type="button"
-            className="reset-button"
-            onClick={resetWeights}
-            disabled={
-              !Object.values(personalWeights).some(
-                (value) => value !== 0,
-              )
-            }
-          >
-            Reset preferences
-          </button>
         </div>
       </header>
 
       <div className="dashboard">
         <section className="panel preferences">
-          <div className="section-heading">
-            <div>
-              <p className="section-kicker">
-                {isRoom ? "YOUR PREFERENCES" : "PREFERENCES"}
-              </p>
-
-              <h2>What matters to you?</h2>
+            <div className="section-heading">
+              <h2>Preferences</h2>
             </div>
-          </div>
 
           <div className="sliders">
             {criteria.map((criterion) => {
@@ -614,6 +621,14 @@ export default function App() {
               );
             })}
           </div>
+          <button
+            type="button"
+            className="panel-reset"
+            onClick={resetWeights}
+            disabled={!hasPreferences}
+          >
+            Reset preferences
+          </button>
         </section>
 
         <section className="panel map-panel">

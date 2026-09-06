@@ -45,22 +45,36 @@ button {
 }
 
 /* HEADER */
-
-.header {
+.top-bar {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 16px;
+
   margin-bottom: 18px;
+  padding: 14px 18px;
+
+  border: 1px solid #e1e7ef;
+  border-radius: 16px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.03),
+    0 8px 20px rgb(15 23 42 / 0.04);
 }
 
-.eyebrow,
-.section-kicker {
-  margin: 0 0 5px;
-  color: #64748b;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
+.app-title h1 {
+  margin: 0;
+
+  color: #172033;
+  font-size: 22px;
+  letter-spacing: -0.035em;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
 }
 
 h1 {
@@ -68,12 +82,6 @@ h1 {
   font-size: clamp(30px, 3vw, 44px);
   line-height: 1;
   letter-spacing: -0.045em;
-}
-
-.subtitle {
-  margin: 8px 0 0;
-  color: #64748b;
-  font-size: 14px;
 }
 
 .reset-button {
@@ -93,6 +101,37 @@ h1 {
 }
 
 .reset-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.panel-reset {
+  width: 100%;
+  margin-top: 18px;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+
+  padding: 9px;
+
+  background: #f8fafc;
+  color: #64748b;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.panel-reset:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.panel-reset:disabled {
   cursor: default;
   opacity: 0.45;
 }
@@ -636,9 +675,7 @@ input[type="range"] {
     overflow: hidden;
   }
 
-  .header {
-    flex: 0 0 auto;
-  }
+ 
 
   .dashboard {
     flex: 1;
@@ -699,15 +736,17 @@ input[type="range"] {
     padding: 20px 14px 30px;
   }
 
-  .header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 14px;
-    margin-bottom: 16px;
-  }
-
   h1 {
     font-size: 34px;
+  }
+
+  .top-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .top-actions {
+    width: 100%;
   }
 
   .subtitle {
@@ -822,26 +861,6 @@ input[type="range"] {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.connection-indicator,
-.room-live-dot,
-.member-dot {
-  display: inline-block;
-  flex: 0 0 auto;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #cbd5e1;
-}
-
-.connection-indicator.connected,
-.room-live-dot {
-  background: #22c55e;
-}
-
-.connection-indicator.unavailable {
-  background: #ef4444;
 }
 
 .room-primary-button,
