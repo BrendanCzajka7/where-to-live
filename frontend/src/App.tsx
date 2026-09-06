@@ -26,6 +26,7 @@ import {
 import { RoomPanel } from "./components/RoomPanel";
 import { useRoomSocket } from "./hooks/useRoomSocket";
 import { Lobby } from "./components/Lobby";
+import type { RoomState } from "./types/room";
 
 type Weights = Record<Criterion, number>;
 
@@ -248,12 +249,14 @@ function StateScorecard({
   weights,
   rank,
   isRoom,
+  room,
   onClose,
 }: {
   state: RankedState;
   weights: Weights;
   rank: number;
   isRoom: boolean;
+  room: RoomState | null;
   onClose: () => void;
 }) {
   const breakdown = criteria
@@ -274,135 +277,152 @@ function StateScorecard({
         b.match - a.match,
     );
 
-    if (!isRoom) {
-      return (
-        <div className="scorecard-backdrop" onMouseDown={onClose}>
-          <aside
-            className="scorecard solo-scorecard"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="scorecard-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <div className="solo-scorecard-header">
-              <h2 id="scorecard-title">{state.name}</h2>
+  if (!isRoom) {
+    return (
+      <div className="scorecard-backdrop" onMouseDown={onClose}>
+        <aside
+          className="scorecard solo-scorecard"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="scorecard-title"
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <div className="solo-scorecard-header">
+            <h2 id="scorecard-title">{state.name}</h2>
 
-              <button
-                type="button"
-                className="scorecard-close"
-                onClick={onClose}
-                aria-label="Close"
-              >
-                ×
-              </button>
+            <button
+              type="button"
+              className="scorecard-close"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="solo-scorecard-result">
+            <span className="solo-result-label">YOUR MATCH</span>
+
+            <div className="solo-result-numbers">
+              <strong>{state.score}%</strong>
+              <span>#{rank} of 50</span>
             </div>
+          </div>
 
-            <div className="solo-scorecard-result">
-              <span className="solo-result-label">YOUR MATCH</span>
-
-              <div className="solo-result-numbers">
-                <strong>{state.score}%</strong>
-                <span>#{rank} of 50</span>
-              </div>
-            </div>
-
-            <div className="solo-breakdown">
-              {breakdown.map((item) => (
-                <div className="solo-breakdown-row" key={item.key}>
-                  <div className="solo-breakdown-top">
-                    <span className="solo-breakdown-name">
-                      <span className="solo-breakdown-icon">
+          <div className="solo-breakdown">
+            {breakdown.map((item) => (
+              <div className="solo-breakdown-row" key={item.key}>
+                <div className="solo-breakdown-top">
+                  <span className="solo-breakdown-name">
+                    <span className="solo-breakdown-icon">
                       {criterionIcons[item.key]}
                     </span>
 
-                      {item.label}
-                    </span>
+                    {item.label}
+                  </span>
 
-                    <strong>{item.match}%</strong>
-                  </div>
-
-                  <div className="solo-breakdown-bar">
-                    <div
-                      className="solo-breakdown-fill"
-                      style={{ width: `${item.match}%` }}
-                    />
-                  </div>
+                  <strong>{item.match}%</strong>
                 </div>
-              ))}
-            </div>
-          </aside>
-        </div>
-      );
-    }
+
+                <div className="solo-breakdown-bar">
+                  <div
+                    className="solo-breakdown-fill"
+                    style={{ width: `${item.match}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    );
+  }
+
+  const playerMatches = (room?.users ?? []).map((user) => ({
+    id: user.id,
+    name: user.name,
+    icon: user.icon,
+    score: scoreStateForWeights(state, user.preferences),
+  }));
 
   return (
     <div className="scorecard-backdrop" onMouseDown={onClose}>
       <aside
-        className="scorecard"
+        className="scorecard solo-scorecard"
         role="dialog"
         aria-modal="true"
         aria-labelledby="scorecard-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="scorecard-header">
-          <div>
-            <p className="section-kicker">STATE SCORECARD</p>
-            <h2 id="scorecard-title">{state.name}</h2>
-          </div>
+        <div className="solo-scorecard-header">
+          <h2 id="scorecard-title">{state.name}</h2>
 
           <button
             type="button"
             className="scorecard-close"
             onClick={onClose}
-            aria-label="Close state scorecard"
+            aria-label="Close"
           >
             ×
           </button>
         </div>
 
-        <div className="scorecard-summary">
-          <div>
-            <span>Overall match</span>
-            <strong>{state.score}%</strong>
-          </div>
+        <div className="solo-scorecard-result">
+          <span className="solo-result-label">GROUP MATCH</span>
 
-          <div>
-            <span>Overall rank</span>
-            <strong>#{rank}</strong>
+          <div className="solo-result-numbers">
+            <strong>{state.score}%</strong>
+            <span>#{rank} of 50</span>
           </div>
         </div>
 
-        <div className="scorecard-breakdown">
-          <div className="scorecard-section-heading">
-            <h3>
-              {isRoom
-                ? "Group match breakdown"
-                : "Your match breakdown"}
-            </h3>
-            <span>Selected priorities</span>
-          </div>
-
+        <div className="solo-breakdown">
           {breakdown.map((item) => (
-            <div className="breakdown-row" key={item.key}>
-              <div className="breakdown-label">
-                <span>{item.label}</span>
+            <div className="solo-breakdown-row" key={item.key}>
+              <div className="solo-breakdown-top">
+                <span className="solo-breakdown-name">
+                  <span className="solo-breakdown-icon">
+                    {criterionIcons[item.key]}
+                  </span>
+
+                  {item.label}
+                </span>
+
                 <strong>{item.match}%</strong>
               </div>
 
-              <div className="breakdown-bar">
+              <div className="solo-breakdown-bar">
                 <div
-                  className="breakdown-fill"
+                  className="solo-breakdown-fill"
                   style={{ width: `${item.match}%` }}
                 />
               </div>
             </div>
           ))}
         </div>
+        <div className="group-player-section">
+          <div className="group-player-section-title">
+            Player matches
+          </div>
 
-        <p className="scorecard-note">
-          Breakdown only includes selected preferences.
-          Stronger preferences have more influence on the overall score.
-        </p>
+          <div className="group-player-matches">
+            {playerMatches.map((player) => (
+              <div className="group-player-match" key={player.id}>
+                <span className="group-player-icon">
+                  {player.icon}
+                </span>
+
+                <strong className="group-player-name">
+                  {player.name}
+                </strong>
+
+                <strong className="group-player-score">
+                  {player.score}%
+                </strong>
+              </div>
+            ))}
+          </div>
+        </div>
       </aside>
     </div>
   );
@@ -415,12 +435,14 @@ export default function App() {
   const [hoveredState, setHoveredState] = useState<string | null>(
     null,
   );
+
   const [hoveredPlayerId, setHoveredPlayerId] = useState<
-  string | null
->(null);
-const [tappedPlayerId, setTappedPlayerId] = useState<string | null>(
-  null,
-);
+    string | null
+  >(null);
+
+  const [tappedPlayerId, setTappedPlayerId] = useState<
+    string | null
+  >(null);
 
   const [selectedStateName, setSelectedStateName] = useState<
     string | null
@@ -450,10 +472,6 @@ const [tappedPlayerId, setTappedPlayerId] = useState<string | null>(
     ? room.combinedPreferences
     : personalWeights;
 
-  /*
-   * A successful room entry starts this user's room
-   * preferences from zero instead of carrying solo choices in.
-   */
   useEffect(() => {
     if (userId && previousUserId.current !== userId) {
       setPersonalWeights(initialWeights);
@@ -464,10 +482,6 @@ const [tappedPlayerId, setTappedPlayerId] = useState<string | null>(
     previousUserId.current = userId;
   }, [userId]);
 
-  /*
-   * Send the current user's room preferences after a short
-   * debounce while sliders are being moved.
-   */
   useEffect(() => {
     if (!room || !userId) return;
 
@@ -484,10 +498,14 @@ const [tappedPlayerId, setTappedPlayerId] = useState<string | null>(
   ]);
 
   const hasPreferences = room
-  ? room.users.some((user) =>
-      Object.values(user.preferences).some((value) => value !== 0),
-    )
-  : Object.values(personalWeights).some((value) => value !== 0);
+    ? room.users.some((user) =>
+        Object.values(user.preferences).some(
+          (value) => value !== 0,
+        ),
+      )
+    : Object.values(personalWeights).some(
+        (value) => value !== 0,
+      );
 
   const rankedStates = useMemo<RankedState[]>(() => {
     const totalWeight = criteria.reduce((total, criterion) => {
@@ -539,85 +557,91 @@ const [tappedPlayerId, setTappedPlayerId] = useState<string | null>(
   }, [displayWeights]);
 
   const playerMarkers = useMemo(() => {
-  if (!room) return [];
+    if (!room) return [];
 
-  const rawMarkers = room.users.flatMap((user) => {
-    const hasUserPreferences = Object.values(user.preferences).some(
-      (value) => value !== 0,
-    );
+    const rawMarkers = room.users.flatMap((user) => {
+      const hasUserPreferences = Object.values(
+        user.preferences,
+      ).some((value) => value !== 0);
 
-    if (!hasUserPreferences) return [];
+      if (!hasUserPreferences) return [];
 
-    const rankedForUser = states
-      .map((state) => ({
-        state,
-        score: scoreStateForWeights(state, user.preferences),
-      }))
-      .sort((a, b) => b.score - a.score);
+      const rankedForUser = states
+        .map((state) => ({
+          state,
+          score: scoreStateForWeights(
+            state,
+            user.preferences,
+          ),
+        }))
+        .sort((a, b) => b.score - a.score);
 
-    const favorite = rankedForUser[0];
+      const favorite = rankedForUser[0];
 
-    const mapFeature = stateFeatures.find(
-      (feature) =>
-        (feature as MapFeature).properties.name === favorite.state.name,
-    ) as MapFeature | undefined;
+      const mapFeature = stateFeatures.find(
+        (feature) =>
+          (feature as MapFeature).properties.name ===
+          favorite.state.name,
+      ) as MapFeature | undefined;
 
-    if (!mapFeature) return [];
+      if (!mapFeature) return [];
 
-    const center = pathGenerator.centroid(mapFeature);
+      const center = pathGenerator.centroid(mapFeature);
 
-    if (
-      !Number.isFinite(center[0]) ||
-      !Number.isFinite(center[1])
-    ) {
-      return [];
+      if (
+        !Number.isFinite(center[0]) ||
+        !Number.isFinite(center[1])
+      ) {
+        return [];
+      }
+
+      return [
+        {
+          id: user.id,
+          name: user.name,
+          icon: user.icon,
+          stateName: favorite.state.name,
+          score: favorite.score,
+          x: center[0],
+          y: center[1],
+        },
+      ];
+    });
+
+    const grouped = new Map<string, typeof rawMarkers>();
+
+    for (const marker of rawMarkers) {
+      const group = grouped.get(marker.stateName) ?? [];
+      group.push(marker);
+      grouped.set(marker.stateName, group);
     }
 
-    return [
-      {
-        id: user.id,
-        name: user.name,
-        icon: user.icon,
-        stateName: favorite.state.name,
-        score: favorite.score,
-        x: center[0],
-        y: center[1],
-      },
-    ];
-  });
+    return rawMarkers.map((marker) => {
+      const group = grouped.get(marker.stateName) ?? [marker];
+      const index = group.findIndex(
+        (item) => item.id === marker.id,
+      );
 
-  const grouped = new Map<string, typeof rawMarkers>();
+      const offsets = [
+        [0, 0],
+        [-18, -14],
+        [18, -14],
+        [-18, 14],
+        [18, 14],
+      ];
 
-  for (const marker of rawMarkers) {
-    const group = grouped.get(marker.stateName) ?? [];
-    group.push(marker);
-    grouped.set(marker.stateName, group);
-  }
+      const [offsetX, offsetY] =
+        group.length === 1
+          ? offsets[0]
+          : offsets[(index % (offsets.length - 1)) + 1];
 
-  return rawMarkers.map((marker) => {
-    const group = grouped.get(marker.stateName) ?? [marker];
-    const index = group.findIndex((item) => item.id === marker.id);
-
-    const offsets = [
-      [0, 0],
-      [-18, -14],
-      [18, -14],
-      [-18, 14],
-      [18, 14],
-    ];
-
-    const [offsetX, offsetY] =
-      group.length === 1
-        ? offsets[0]
-        : offsets[(index % (offsets.length - 1)) + 1];
-
-    return {
-      ...marker,
-      x: marker.x + offsetX,
-      y: marker.y + offsetY,
-    };
-  });
-}, [room]);
+      return {
+        ...marker,
+        x: marker.x + offsetX,
+        y: marker.y + offsetY,
+      };
+    });
+  }, [room]);
 
   const scoreByState = useMemo(
     () =>
@@ -704,42 +728,43 @@ const [tappedPlayerId, setTappedPlayerId] = useState<string | null>(
     return String(Math.round(value * 10) / 10);
   }
 
- function getTopReasons(
-  state: StateData,
-  positive: boolean = true,
-) {
-  return criteria
-    .map((criterion) => {
-      const preference = displayWeights[criterion.key] ?? 0;
+  function getTopReasons(
+    state: StateData,
+    positive: boolean = true,
+  ) {
+    return criteria
+      .map((criterion) => {
+        const preference =
+          displayWeights[criterion.key] ?? 0;
 
-      if (preference === 0) return null;
+        if (preference === 0) return null;
 
-      const match = getCriterionMatch(
-        state,
-        criterion.key,
-        preference,
-      );
+        const match = getCriterionMatch(
+          state,
+          criterion.key,
+          preference,
+        );
 
-      return {
-        key: criterion.key,
-        score: positive ? match : 100 - match,
-      };
-    })
-    .filter((item) => item !== null)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-}
+        return {
+          key: criterion.key,
+          score: positive ? match : 100 - match,
+        };
+      })
+      .filter((item) => item !== null)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+  }
 
-if (room?.status === "lobby" && userId) {
-  return (
-    <Lobby
-      room={room}
-      userId={userId}
-      onStart={startRoom}
-      onLeave={handleLeaveRoom}
-    />
-  );
-}
+  if (room?.status === "lobby" && userId) {
+    return (
+      <Lobby
+        room={room}
+        userId={userId}
+        onStart={startRoom}
+        onLeave={handleLeaveRoom}
+      />
+    );
+  }
 
   return (
     <main className="app">
@@ -756,7 +781,7 @@ if (room?.status === "lobby" && userId) {
             error={error}
             onCreateRoom={createRoom}
             onJoinRoom={joinRoom}
-            onLeaveRoom={leaveRoom}
+            onLeaveRoom={handleLeaveRoom}
             onClearError={clearError}
           />
         </div>
@@ -770,7 +795,10 @@ if (room?.status === "lobby" && userId) {
 
           <div className="preference-groups">
             {preferenceGroups.map((group) => (
-              <div className="preference-group" key={group.label}>
+              <div
+                className="preference-group"
+                key={group.label}
+              >
                 <div className="preference-group-title">
                   {group.label}
                 </div>
@@ -782,15 +810,20 @@ if (room?.status === "lobby" && userId) {
                     )!;
 
                     const isDirectional =
-                      directionalCriteria.has(criterion.key);
+                      directionalCriteria.has(
+                        criterion.key,
+                      );
 
                     const value =
                       personalWeights[criterion.key] ?? 0;
 
                     const [leftLabel, rightLabel] =
                       isDirectional
-                        ? getDirectionalLabels(criterion.key)
+                        ? getDirectionalLabels(
+                            criterion.key,
+                          )
                         : ["", ""];
+
                     return (
                       <label
                         className="slider-row"
@@ -815,15 +848,18 @@ if (room?.status === "lobby" && userId) {
                             step="1"
                             value={value}
                             style={{
-                              background: getSliderBackground(
-                                value,
-                                isDirectional,
-                              ),
+                              background:
+                                getSliderBackground(
+                                  value,
+                                  isDirectional,
+                                ),
                             }}
                             onChange={(event) =>
                               updateWeight(
                                 criterion.key,
-                                Number(event.target.value),
+                                Number(
+                                  event.target.value,
+                                ),
                               )
                             }
                             aria-label={criterion.label}
@@ -835,7 +871,6 @@ if (room?.status === "lobby" && userId) {
                         </div>
                       </label>
                     );
-                    
                   })}
                 </div>
               </div>
@@ -864,7 +899,7 @@ if (room?.status === "lobby" && userId) {
               <span className="map-hint">
                 Move a slider to begin
               </span>
-              )}
+            )}
           </div>
 
           <div className="map-wrapper">
@@ -885,7 +920,10 @@ if (room?.status === "lobby" && userId) {
                   <path
                     key={name}
                     d={path}
-                    fill={getColor(score, hasPreferences)}
+                    fill={getColor(
+                      score,
+                      hasPreferences,
+                    )}
                     className={`state ${
                       selectedStateName === name
                         ? "state-selected"
@@ -901,6 +939,7 @@ if (room?.status === "lobby" && userId) {
                   />
                 );
               })}
+
               {playerMarkers.map((marker) => {
                 const isHovered =
                   hoveredPlayerId === marker.id ||
@@ -913,17 +952,31 @@ if (room?.status === "lobby" && userId) {
                     style={{
                       transform: `translate(${marker.x}px, ${marker.y}px)`,
                     }}
-                    onMouseEnter={() => setHoveredPlayerId(marker.id)}
-                    onMouseLeave={() => setHoveredPlayerId(null)}
+                    onMouseEnter={() =>
+                      setHoveredPlayerId(marker.id)
+                    }
+                    onMouseLeave={() =>
+                      setHoveredPlayerId(null)
+                    }
                     onClick={(event) => {
                       event.stopPropagation();
 
-                      if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
-                        if (tappedPlayerId === marker.id) {
+                      if (
+                        window.matchMedia(
+                          "(hover: none) and (pointer: coarse)",
+                        ).matches
+                      ) {
+                        if (
+                          tappedPlayerId === marker.id
+                        ) {
                           setTappedPlayerId(null);
-                          openState(marker.stateName);
+                          openState(
+                            marker.stateName,
+                          );
                         } else {
-                          setTappedPlayerId(marker.id);
+                          setTappedPlayerId(
+                            marker.id,
+                          );
                         }
 
                         return;
@@ -957,10 +1010,12 @@ if (room?.status === "lobby" && userId) {
                           textAnchor="middle"
                           className="player-tooltip-state"
                         >
-                          {marker.stateName} · {marker.score}%
+                          {marker.stateName} ·{" "}
+                          {marker.score}%
                         </text>
                       </g>
                     )}
+
                     <circle
                       className="player-map-marker-touch-target"
                       r="28"
@@ -990,7 +1045,9 @@ if (room?.status === "lobby" && userId) {
                 <span>
                   {hasPreferences
                     ? `${
-                        scoreByState.get(hoveredState) ?? 0
+                        scoreByState.get(
+                          hoveredState,
+                        ) ?? 0
                       }% match · Click for details`
                     : "Set preferences to score"}
                 </span>
@@ -1014,14 +1071,16 @@ if (room?.status === "lobby" && userId) {
 
           {!hasPreferences ? (
             <div className="empty-leaderboard">
-              {Array.from({ length: 10 }).map((_, index) => (
-                <div
-                  className="ranking-placeholder"
-                  key={index}
-                >
-                  <span>{index + 1}</span>
-                </div>
-              ))}
+              {Array.from({ length: 10 }).map(
+                (_, index) => (
+                  <div
+                    className="ranking-placeholder"
+                    key={index}
+                  >
+                    <span>{index + 1}</span>
+                  </div>
+                ),
+              )}
             </div>
           ) : (
             <>
@@ -1036,27 +1095,39 @@ if (room?.status === "lobby" && userId) {
                         type="button"
                         className="ranking-row"
                         key={state.name}
-                        onClick={() => openState(state.name)}
+                        onClick={() =>
+                          openState(state.name)
+                        }
                       >
                         <span className="rank">
                           {index + 1}
                         </span>
 
                         <span className="ranking-state">
-                          <strong>{state.name}</strong>
+                          <strong>
+                            {state.name}
+                          </strong>
 
                           <span className="ranking-reasons">
-                            {getTopReasons(state).map((item) => (
+                            {getTopReasons(
+                              state,
+                            ).map((item) => (
                               <span
                                 className="reason-positive"
                                 key={item.key}
                                 title={
                                   criteria.find(
-                                    (c) => c.key === item.key,
+                                    (c) =>
+                                      c.key ===
+                                      item.key,
                                   )?.label
                                 }
                               >
-                                {criterionIcons[item.key]}
+                                {
+                                  criterionIcons[
+                                    item.key
+                                  ]
+                                }
                               </span>
                             ))}
                           </span>
@@ -1076,42 +1147,57 @@ if (room?.status === "lobby" && userId) {
                 <p>▼ Least matches</p>
 
                 <div className="ranking-list">
-                  {worstStates.map((state, index) => (
-                    <button
-                      type="button"
-                      className="ranking-row"
-                      key={state.name}
-                      onClick={() => openState(state.name)}
-                    >
-                      <span className="rank">
-                        {index + 1}
-                      </span>
-
-                      <span className="ranking-state">
-                        <strong>{state.name}</strong>
-
-                        <span className="ranking-reasons">
-                          {getTopReasons(state, false).map((item) => (
-                            <span
-                              className="reason-negative"
-                              key={item.key}
-                              title={
-                                criteria.find(
-                                  (c) => c.key === item.key,
-                                )?.label
-                              }
-                            >
-                              {criterionIcons[item.key]}
-                            </span>
-                          ))}
+                  {worstStates.map(
+                    (state, index) => (
+                      <button
+                        type="button"
+                        className="ranking-row"
+                        key={state.name}
+                        onClick={() =>
+                          openState(state.name)
+                        }
+                      >
+                        <span className="rank">
+                          {index + 1}
                         </span>
-                      </span>
 
-                      <strong className="score">
-                        {state.score}%
-                      </strong>
-                    </button>
-                  ))}
+                        <span className="ranking-state">
+                          <strong>
+                            {state.name}
+                          </strong>
+
+                          <span className="ranking-reasons">
+                            {getTopReasons(
+                              state,
+                              false,
+                            ).map((item) => (
+                              <span
+                                className="reason-negative"
+                                key={item.key}
+                                title={
+                                  criteria.find(
+                                    (c) =>
+                                      c.key ===
+                                      item.key,
+                                  )?.label
+                                }
+                              >
+                                {
+                                  criterionIcons[
+                                    item.key
+                                  ]
+                                }
+                              </span>
+                            ))}
+                          </span>
+                        </span>
+
+                        <strong className="score">
+                          {state.score}%
+                        </strong>
+                      </button>
+                    ),
+                  )}
                 </div>
               </div>
             </>
@@ -1123,9 +1209,14 @@ if (room?.status === "lobby" && userId) {
         <StateScorecard
           state={selectedState}
           weights={displayWeights}
-          rank={rankByState.get(selectedState.name) ?? 0}
+          rank={
+            rankByState.get(selectedState.name) ?? 0
+          }
           isRoom={isRoom}
-          onClose={() => setSelectedStateName(null)}
+          room={room}
+          onClose={() =>
+            setSelectedStateName(null)
+          }
         />
       )}
 
@@ -1149,7 +1240,9 @@ if (room?.status === "lobby" && userId) {
                 <p className="section-kicker">
                   GROUP PREFERENCE
                 </p>
-                <h2>{selectedCriterion.label}</h2>
+                <h2>
+                  {selectedCriterion.label}
+                </h2>
               </div>
 
               <button
@@ -1166,6 +1259,7 @@ if (room?.status === "lobby" && userId) {
 
             <div className="combined-value">
               <span>Group average</span>
+
               <strong>
                 {formatGroupValue(
                   selectedCriterion.key,
@@ -1179,7 +1273,9 @@ if (room?.status === "lobby" && userId) {
             <div className="contribution-list">
               {room.users.map((user) => {
                 const value =
-                  user.preferences[selectedCriterion.key];
+                  user.preferences[
+                    selectedCriterion.key
+                  ];
 
                 return (
                   <div
@@ -1188,7 +1284,10 @@ if (room?.status === "lobby" && userId) {
                   >
                     <div>
                       <span className="member-dot" />
-                      <strong>{user.name}</strong>
+
+                      <strong>
+                        {user.name}
+                      </strong>
 
                       {user.id === userId && (
                         <small>You</small>
