@@ -418,6 +418,9 @@ export default function App() {
   const [hoveredPlayerId, setHoveredPlayerId] = useState<
   string | null
 >(null);
+const [tappedPlayerId, setTappedPlayerId] = useState<string | null>(
+  null,
+);
 
   const [selectedStateName, setSelectedStateName] = useState<
     string | null
@@ -899,7 +902,9 @@ if (room?.status === "lobby" && userId) {
                 );
               })}
               {playerMarkers.map((marker) => {
-                const isHovered = hoveredPlayerId === marker.id;
+                const isHovered =
+                  hoveredPlayerId === marker.id ||
+                  tappedPlayerId === marker.id;
 
                 return (
                   <g
@@ -910,7 +915,22 @@ if (room?.status === "lobby" && userId) {
                     }}
                     onMouseEnter={() => setHoveredPlayerId(marker.id)}
                     onMouseLeave={() => setHoveredPlayerId(null)}
-                    onClick={() => openState(marker.stateName)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+
+                      if (window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
+                        if (tappedPlayerId === marker.id) {
+                          setTappedPlayerId(null);
+                          openState(marker.stateName);
+                        } else {
+                          setTappedPlayerId(marker.id);
+                        }
+
+                        return;
+                      }
+
+                      openState(marker.stateName);
+                    }}
                   >
                     {isHovered && (
                       <g className="player-marker-tooltip">
@@ -941,6 +961,10 @@ if (room?.status === "lobby" && userId) {
                         </text>
                       </g>
                     )}
+                    <circle
+                      className="player-map-marker-touch-target"
+                      r="28"
+                    />
 
                     <circle
                       className="player-map-marker-circle"

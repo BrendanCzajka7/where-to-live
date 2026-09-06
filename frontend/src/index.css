@@ -451,6 +451,36 @@ input[type="range"]::-moz-range-thumb {
   user-select: none;
 }
 
+.player-map-marker-touch-target {
+  fill: transparent;
+  pointer-events: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .player-map-marker-touch-target {
+    pointer-events: all;
+  }
+
+  .player-map-marker:hover .player-map-marker-circle {
+    stroke-width: 2.5px;
+  }
+
+  .player-marker-tooltip rect {
+    width: 300px;
+    height: 90px;
+    x: -150px;
+    y: -125px;
+  }
+
+  .player-tooltip-name {
+    font-size: 27px;
+  }
+
+  .player-tooltip-state {
+    font-size: 22px;
+  }
+}
+
 .player-map-marker:hover .player-map-marker-circle {
   stroke-width: 4px;
 }
