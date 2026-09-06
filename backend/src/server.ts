@@ -7,6 +7,7 @@ import {
   getRoom,
   joinRoom,
   leaveRoom,
+  startRoom,
   updateUserPreferences,
 } from "./rooms.js";
 import { Room, ServerMessage } from "./types.js";
@@ -173,6 +174,26 @@ wss.on("connection", (socket) => {
           broadcastRoom(room);
         }
 
+        break;
+      }
+
+      case "start_room": {
+        if (!session.roomCode || !session.userId) {
+          sendError(socket, "You are not in a room.");
+          return;
+        }
+
+        const room = startRoom(
+          session.roomCode,
+          session.userId,
+        );
+
+        if (!room) {
+          sendError(socket, "Only the host can start the room.");
+          return;
+        }
+
+        broadcastRoom(room);
         break;
       }
 

@@ -52,6 +52,8 @@ export function createUser(name: string): RoomUser {
 export function createRoom(user: RoomUser): Room {
   const room: Room = {
     code: generateRoomCode(),
+    hostId: user.id,
+    status: "lobby",
     users: new Map([[user.id, user]]),
   };
 
@@ -139,6 +141,8 @@ export function getPublicRoomState(
 ): PublicRoomState {
   return {
     code: room.code,
+    hostId: room.hostId,
+    status: room.status,
     users: Array.from(room.users.values()).map((user) => ({
       id: user.id,
       name: user.name,
@@ -146,6 +150,21 @@ export function getPublicRoomState(
     })),
     combinedPreferences: getCombinedPreferences(room),
   };
+}
+
+export function startRoom(
+  roomCode: string,
+  userId: string,
+): Room | null {
+  const room = rooms.get(roomCode);
+
+  if (!room || room.hostId !== userId) {
+    return null;
+  }
+
+  room.status = "active";
+
+  return room;
 }
 
 export function getRoom(roomCode: string): Room | null {

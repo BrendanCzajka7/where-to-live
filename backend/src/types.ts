@@ -26,11 +26,15 @@ export type RoomUser = {
 
 export type Room = {
   code: string;
+  hostId: string;
+  status: "lobby" | "active";
   users: Map<string, RoomUser>;
 };
 
 export type PublicRoomState = {
   code: string;
+  hostId: string;
+  status: "lobby" | "active";
   users: RoomUser[];
   combinedPreferences: Preferences;
 };
@@ -51,6 +55,9 @@ export type ClientMessage =
     }
   | {
       type: "leave_room";
+    }
+  | {
+      type: "start_room";
     };
 
 export type ServerMessage =

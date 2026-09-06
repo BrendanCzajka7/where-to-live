@@ -135,6 +135,10 @@ export function parseClientMessage(
       return {
         type: "leave_room",
       };
+    case "start_room":
+      return {
+        type: "start_room",
+      };
 
     default:
       return null;
