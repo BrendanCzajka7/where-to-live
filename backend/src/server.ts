@@ -119,6 +119,22 @@ wss.on("connection", (socket) => {
         break;
       }
 
+      case "preview_room": {
+        const room = getRoom(message.roomCode);
+
+        if (!room) {
+          sendError(socket, "Room not found.");
+          return;
+        }
+
+        send(socket, {
+          type: "room_preview",
+          room: getPublicRoomState(room),
+        });
+
+        break;
+      }
+
       case "join_room": {
         if (session.roomCode) {
           sendError(socket, "You are already in a room.");

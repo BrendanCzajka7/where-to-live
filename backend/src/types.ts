@@ -52,6 +52,11 @@ export type ClientMessage =
       name: string;
       icon: string;
     }
+
+  | {
+      type: "preview_room";
+      roomCode: string;
+    }
   | {
       type: "update_preferences";
       preferences: Preferences;
@@ -78,4 +83,8 @@ export type ServerMessage =
   | {
       type: "error";
       message: string;
+    }
+  | {
+      type: "room_preview";
+      room: PublicRoomState;
     };

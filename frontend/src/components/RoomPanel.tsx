@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   ConnectionStatus,
   RoomState,
@@ -33,6 +33,12 @@ export function RoomPanel({
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   const [selectedIcon, setSelectedIcon] = useState("🌲");
+
+  useEffect(() => {
+  if (room) {
+    setIsOpen(false);
+  }
+}, [room]);
 
   function openPanel(nextMode: "create" | "join") {
     setMode(nextMode);
