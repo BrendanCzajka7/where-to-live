@@ -57,7 +57,6 @@ export function RoomPanel({
     if (cleanCode.length !== 4) return;
 
     onJoinRoom(cleanName, cleanCode, selectedIcon);
-    setIsOpen(false);
   }
 
   async function copyCode() {
@@ -305,21 +304,28 @@ export function RoomPanel({
                </label>
 
               <div className="icon-picker">
-                {["🌲", "🏔️", "🌊", "🌵"].map((icon) => (
-                  <button
-                    type="button"
-                    key={icon}
-                    className={
-                      selectedIcon === icon
-                        ? "icon-option icon-option-selected"
-                        : "icon-option"
-                    }
-                    aria-pressed={selectedIcon === icon}
-                    onClick={() => setSelectedIcon(icon)}
-                  >
-                    {icon}
-                  </button>
-                ))}
+                {["🌲", "🏔️", "🌊", "🌵"].map((icon) => {
+                  const iconTaken = false;
+
+                  return (
+                    <button
+                      type="button"
+                      key={icon}
+                      disabled={iconTaken}
+                      className={
+                        selectedIcon === icon
+                          ? "icon-option icon-option-selected"
+                          : iconTaken
+                          ? "icon-option icon-option-disabled"
+                          : "icon-option"
+                      }
+                      aria-pressed={selectedIcon === icon}
+                      onClick={() => setSelectedIcon(icon)}
+                    >
+                      {icon}
+                    </button>
+                  );
+                })}
               </div>
 
               {mode === "join" && (

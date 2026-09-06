@@ -126,12 +126,17 @@ wss.on("connection", (socket) => {
         }
 
         const user = createUser(message.name, message.icon);
-        const room = joinRoom(message.roomCode, user);
+        const result = joinRoom(
+            message.roomCode,
+            user,
+          );
 
-        if (!room) {
-          sendError(socket, "Room not found.");
-          return;
-        }
+          if ("error" in result) {
+            sendError(socket, result.error);
+            return;
+          }
+
+          const room = result.room;
 
         session.userId = user.id;
         session.roomCode = room.code;

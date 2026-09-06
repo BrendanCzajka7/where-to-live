@@ -8,6 +8,7 @@ import {
 } from "./types.js";
 
 const rooms = new Map<string, Room>();
+const MAX_PLAYERS = 4;
 
 const emptyPreferences = (): Preferences => ({
   affordability: 0,
@@ -69,16 +70,44 @@ export function createRoom(user: RoomUser): Room {
 export function joinRoom(
   roomCode: string,
   user: RoomUser,
-): Room | null {
+):
+  | { room: Room }
+  | { error: string } {
+
   const room = rooms.get(roomCode);
 
   if (!room) {
-    return null;
+    return { error: "Room not found." };
+  }
+
+  if (room.users.size >= MAX_PLAYERS) {
+    return { error: "Room is full." };
+  }
+
+  const nameTaken = Array.from(room.users.values())
+    .some(
+      (existingUser) =>
+        existingUser.name.toLowerCase() ===
+        user.name.toLowerCase(),
+    );
+
+  if (nameTaken) {
+    return { error: "Name already taken." };
+  }
+
+  const iconTaken = Array.from(room.users.values())
+    .some(
+      (existingUser) =>
+        existingUser.icon === user.icon,
+    );
+
+  if (iconTaken) {
+    return { error: "Icon already taken." };
   }
 
   room.users.set(user.id, user);
 
-  return room;
+  return { room };
 }
 
 export function updateUserPreferences(
