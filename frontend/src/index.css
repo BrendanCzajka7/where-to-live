@@ -2019,6 +2019,17 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 0 0 2px rgb(124 58 237 / 0.12);
 }
 
+.icon-option-disabled {
+  opacity: 0.35;
+  filter: grayscale(100%);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.icon-option-disabled:hover {
+  transform: none;
+}
+
 .ranking-reasons {
   display: flex;
   gap: 5px;

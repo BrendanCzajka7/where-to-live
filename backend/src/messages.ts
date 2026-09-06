@@ -136,6 +136,18 @@ export function parseClientMessage(
         icon: message.icon,
       };
 
+    case "preview_room":
+      if (
+        !isValidRoomCode(message.roomCode)
+      ) {
+        return null;
+      }
+
+      return {
+        type: "preview_room",
+        roomCode: message.roomCode.toUpperCase(),
+      };
+
     case "update_preferences":
       if (!isValidPreferences(message.preferences)) {
         return null;

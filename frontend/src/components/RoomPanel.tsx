@@ -7,10 +7,18 @@ import type {
 type RoomPanelProps = {
   status: ConnectionStatus;
   room: RoomState | null;
+  previewRoom: RoomState | null;
   userId: string | null;
   error: string | null;
+
   onCreateRoom: (name: string, icon: string) => void;
-  onJoinRoom: (name: string, roomCode: string, icon: string) => void;
+  onJoinRoom: (
+    name: string,
+    roomCode: string,
+    icon: string,
+  ) => void;
+
+  onPreviewRoom: (roomCode: string) => void;
   onLeaveRoom: () => void;
   onClearError: () => void;
 };
@@ -18,175 +26,203 @@ type RoomPanelProps = {
 export function RoomPanel({
   status,
   room,
+  previewRoom,
   userId,
   error,
   onCreateRoom,
   onJoinRoom,
+  onPreviewRoom,
   onLeaveRoom,
   onClearError,
 }: RoomPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState<"create" | "join">("create");
+
+  const [mode, setMode] =
+    useState<"create" | "join">("create");
+
+  const [joinStep, setJoinStep] =
+    useState<"code" | "details">("code");
+
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
-  const [selectedIcon, setSelectedIcon] = useState("🌲");
+  const [selectedIcon, setSelectedIcon] =
+    useState("🌲");
+
+  const [copied, setCopied] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] =
+    useState(false);
 
   useEffect(() => {
-  if (room) {
-    setIsOpen(false);
+  if (!previewRoom) return;
+
+  const icons = ["🌲", "🏔️", "🌊", "🌵"];
+
+  const availableIcon = icons.find(
+    (icon) =>
+      !previewRoom.users.some(
+        (user) => user.icon === icon,
+      ),
+  );
+
+  if (availableIcon) {
+    setSelectedIcon(availableIcon);
   }
-}, [room]);
+}, [previewRoom]);
+
+
+  useEffect(() => {
+    if (room) {
+      setIsOpen(false);
+    }
+  }, [room]);
+
+
+  useEffect(() => {
+    if (previewRoom) {
+      setJoinStep("details");
+    }
+  }, [previewRoom]);
+
 
   function openPanel(nextMode: "create" | "join") {
     setMode(nextMode);
+    setJoinStep(
+      nextMode === "join"
+        ? "code"
+        : "details",
+    );
+
+    setName("");
+    setRoomCode("");
+    setSelectedIcon("🌲");
+
     onClearError();
     setIsOpen(true);
   }
 
+
   function submit(event: React.FormEvent) {
     event.preventDefault();
+
+    if (mode === "create") {
+      const cleanName = name.trim();
+
+      if (!cleanName) return;
+
+      onCreateRoom(
+        cleanName,
+        selectedIcon,
+      );
+
+      return;
+    }
+
+
+    const cleanCode =
+      roomCode.trim().toUpperCase();
+
+
+    if (joinStep === "code") {
+      if (cleanCode.length !== 4) return;
+
+      onPreviewRoom(cleanCode);
+      return;
+    }
+
 
     const cleanName = name.trim();
 
     if (!cleanName) return;
 
-    if (mode === "create") {
-      onCreateRoom(cleanName, selectedIcon);
-      return;
-    }
-
-    const cleanCode = roomCode.trim().toUpperCase();
-
-    if (cleanCode.length !== 4) return;
-
-    onJoinRoom(cleanName, cleanCode, selectedIcon);
+    onJoinRoom(
+      cleanName,
+      cleanCode,
+      selectedIcon,
+    );
   }
+
 
   async function copyCode() {
     if (!room) return;
 
-    await navigator.clipboard.writeText(room.code);
+    await navigator.clipboard.writeText(
+      room.code,
+    );
+
     setCopied(true);
 
     window.setTimeout(() => {
       setCopied(false);
     }, 1500);
   }
+
+
   function leave() {
-  onLeaveRoom();
-  setShowLeaveConfirm(false);
-  setIsOpen(false);
-  setName("");
-  setRoomCode("");
-}
+    onLeaveRoom();
+
+    setShowLeaveConfirm(false);
+    setIsOpen(false);
+    setName("");
+    setRoomCode("");
+  }
+
 
   if (room) {
-  return (
-    <>
-      <div className="room-actions">
-      <div className="room-code-display">
-        <span>{room.code}</span>
+    return (
+      <>
+        <div className="room-actions">
+          <div className="room-code-display">
+            <span>{room.code}</span>
 
-        <button
-          type="button"
-          className="room-copy-link"
-          onClick={copyCode}
-          aria-label="Copy room code"
-          title={copied ? "Copied" : "Copy room code"}
-        >
-          🔗
-        </button>
-      </div>
+            <button
+              type="button"
+              className="room-copy-link"
+              onClick={copyCode}
+            >
+              🔗
+            </button>
+          </div>
 
-      <button
-        type="button"
-        className="room-leave-button"
-        onClick={() => setShowLeaveConfirm(true)}
-      >
-        Leave
-      </button>
-    </div>
-
-      {isOpen && (
-        <div
-          className="room-backdrop"
-          onMouseDown={() => setIsOpen(false)}
-        >
-          <section
-            className="room-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="room-dialog-title"
-            onMouseDown={(event) => event.stopPropagation()}
+          <button
+            type="button"
+            className="room-leave-button"
+            onClick={() =>
+              setShowLeaveConfirm(true)
+            }
           >
-            <div className="room-dialog-header">
-              <div>
-                <p className="section-kicker">GROUP ROOM</p>
-                <h2 id="room-dialog-title">{room.code}</h2>
-              </div>
-
-              <button
-                type="button"
-                className="room-close"
-                onClick={() => setIsOpen(false)}
-                aria-label="Close room details"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="room-members">
-              <span className="room-label">
-                {room.users.length}{" "}
-                {room.users.length === 1 ? "person" : "people"}
-              </span>
-
-              {room.users.map((user) => (
-                <div className="room-member" key={user.id}>
-                  <span className="member-dot" />
-
-                  <strong>{user.name}</strong>
-
-                  {user.id === userId && <span>You</span>}
-                </div>
-              ))}
-            </div>
-
-            <div className="room-dialog-actions">
-              <button
-                type="button"
-                className="room-secondary-button"
-                onClick={copyCode}
-              >
-                {copied ? "Copied" : "Copy room code"}
-              </button>
-            </div>
-          </section>
+            Leave
+          </button>
         </div>
-      )}
-      {showLeaveConfirm && (
+
+
+        {showLeaveConfirm && (
           <div
             className="room-backdrop"
-            onMouseDown={() => setShowLeaveConfirm(false)}
+            onMouseDown={() =>
+              setShowLeaveConfirm(false)
+            }
           >
             <section
               className="leave-confirm"
-              role="alertdialog"
-              aria-modal="true"
-              aria-labelledby="leave-confirm-title"
-              onMouseDown={(event) => event.stopPropagation()}
+              onMouseDown={(e) =>
+                e.stopPropagation()
+              }
             >
-              <h2 id="leave-confirm-title">Leave room?</h2>
-              <p>Are you sure you want to leave? Your preferences will be lost</p>
+              <h2>Leave room?</h2>
+
+              <p>
+                Are you sure you want to leave?
+              </p>
 
               <div className="leave-confirm-actions">
+
                 <button
                   type="button"
                   className="room-secondary-button"
-                  onClick={() => setShowLeaveConfirm(false)}
+                  onClick={() =>
+                    setShowLeaveConfirm(false)
+                  }
                 >
                   Cancel
                 </button>
@@ -198,178 +234,215 @@ export function RoomPanel({
                 >
                   Leave
                 </button>
+
               </div>
             </section>
           </div>
         )}
-    </>
-  );
-}
+      </>
+    );
+  }
+
 
   return (
     <>
       <div className="room-actions">
-        {status === "connected" ? (
-            <>
-              <button
-                type="button"
-                className="room-primary-button"
-                onClick={() => openPanel("create")}
-              >
-                Create Room
-              </button>
 
-              <button
-                type="button"
-                className="room-secondary-button"
-                onClick={() => openPanel("join")}
-              >
-                Join Room
-              </button>
-            </>
-          ) : (
+        {status === "connected" ? (
+          <>
+            <button
+              type="button"
+              className="room-primary-button"
+              onClick={() =>
+                openPanel("create")
+              }
+            >
+              Create Room
+            </button>
+
             <button
               type="button"
               className="room-secondary-button"
-              disabled
+              onClick={() =>
+                openPanel("join")
+              }
             >
-              Multiplayer Offline
+              Join Room
             </button>
-          )}
-        </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="room-secondary-button"
+            disabled
+          >
+            Multiplayer Offline
+          </button>
+        )}
+
+      </div>
+
 
       {isOpen && (
         <div
           className="room-backdrop"
-          onMouseDown={() => setIsOpen(false)}
+          onMouseDown={() =>
+            setIsOpen(false)
+          }
         >
           <section
             className="room-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="room-dialog-title"
-            onMouseDown={(event) => event.stopPropagation()}
+            onMouseDown={(e) =>
+              e.stopPropagation()
+            }
           >
+
             <div className="room-dialog-header">
               <div>
-                <p className="section-kicker">COLLABORATE</p>
-                <h2 id="room-dialog-title">
+                <p className="section-kicker">
+                  COLLABORATE
+                </p>
+
+                <h2>
                   {mode === "create"
-                    ? "Start a room"
-                    : "Join a room"}
+                    ? "Create room"
+                    : "Join room"}
                 </h2>
               </div>
 
               <button
                 type="button"
                 className="room-close"
-                onClick={() => setIsOpen(false)}
-                aria-label="Close"
+                onClick={() =>
+                  setIsOpen(false)
+                }
               >
                 ×
               </button>
             </div>
 
-            <div className="room-tabs">
-              <button
-                type="button"
-                className={mode === "create" ? "active" : ""}
-                onClick={() => {
-                  setMode("create");
-                  onClearError();
-                }}
-              >
-                Create
-              </button>
 
-              <button
-                type="button"
-                className={mode === "join" ? "active" : ""}
-                onClick={() => {
-                  setMode("join");
-                  onClearError();
-                }}
-              >
-                Join
-              </button>
-            </div>
+            <form
+              className="room-form"
+              onSubmit={submit}
+            >
 
-            <form className="room-form" onSubmit={submit}>
-              <label>
-                Your name
-                <input
-                  type="text"
-                  maxLength={30}
-                  value={name}
-                  onChange={(event) =>
-                    setName(event.target.value)
-                  }
-                  placeholder="Alice"
-                  autoFocus
-                />
-               </label>
+              {mode === "join" &&
+                joinStep === "code" && (
+                  <label>
+                    Room code
 
-              <div className="icon-picker">
-                {["🌲", "🏔️", "🌊", "🌵"].map((icon) => {
-                  const iconTaken = false;
-
-                  return (
-                    <button
-                      type="button"
-                      key={icon}
-                      disabled={iconTaken}
-                      className={
-                        selectedIcon === icon
-                          ? "icon-option icon-option-selected"
-                          : iconTaken
-                          ? "icon-option icon-option-disabled"
-                          : "icon-option"
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={roomCode}
+                      onChange={(event) =>
+                        setRoomCode(
+                          event.target.value
+                            .toUpperCase()
+                            .replace(
+                              /[^A-Z0-9]/g,
+                              "",
+                            ),
+                        )
                       }
-                      aria-pressed={selectedIcon === icon}
-                      onClick={() => setSelectedIcon(icon)}
-                    >
-                      {icon}
-                    </button>
-                  );
-                })}
-              </div>
+                      placeholder="HSZ8"
+                    />
+                  </label>
+                )}
 
-              {mode === "join" && (
-                <label>
-                  Room code
-                  <input
-                    type="text"
-                    maxLength={4}
-                    value={roomCode}
-                    onChange={(event) =>
-                      setRoomCode(
-                        event.target.value
-                          .toUpperCase()
-                          .replace(/[^A-Z0-9]/g, ""),
-                      )
-                    }
-                    placeholder="HSZ8"
-                    className="room-code-input"
-                  />
-                </label>
+
+              {(mode === "create" ||
+                joinStep === "details") && (
+                <>
+                  <label>
+                    Your name
+
+                    <input
+                      type="text"
+                      maxLength={30}
+                      value={name}
+                      onChange={(event) =>
+                        setName(
+                          event.target.value,
+                        )
+                      }
+                      placeholder="Alice"
+                    />
+                  </label>
+
+
+                  <div className="icon-picker">
+
+                    {[
+                      "🌲",
+                      "🏔️",
+                      "🌊",
+                      "🌵",
+                    ].map((icon) => {
+
+                      const taken =
+                        previewRoom?.users.some(
+                          (user) =>
+                            user.icon === icon,
+                        ) ?? false;
+
+
+                      return (
+                        <button
+                          type="button"
+                          key={icon}
+                          disabled={taken}
+                          className={
+                            selectedIcon === icon
+                              ? "icon-option icon-option-selected"
+                              : taken
+                              ? "icon-option icon-option-disabled"
+                              : "icon-option"
+                          }
+                          onClick={() => {
+                            if (!taken) {
+                              setSelectedIcon(icon);
+                            }
+                          }}
+                        >
+                          {icon}
+                        </button>
+                      );
+                    })}
+
+                  </div>
+                </>
               )}
 
-              {error && <p className="room-error">{error}</p>}
+
+              {error && (
+                <p className="room-error">
+                  {error}
+                </p>
+              )}
+
 
               <button
                 type="submit"
                 className="room-submit-button"
                 disabled={
-                  !name.trim() ||
-                  (mode === "join" &&
-                    roomCode.trim().length !== 4)
+                  mode === "create"
+                    ? !name.trim()
+                    : joinStep === "code"
+                    ? roomCode.length !== 4
+                    : !name.trim()
                 }
               >
                 {mode === "create"
                   ? "Create room"
+                  : joinStep === "code"
+                  ? "Continue"
                   : "Join room"}
               </button>
+
             </form>
+
           </section>
         </div>
       )}

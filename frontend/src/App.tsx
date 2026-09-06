@@ -456,17 +456,19 @@ export default function App() {
   const previousUserId = useRef<string | null>(null);
 
   const {
-    status,
-    room,
-    userId,
-    error,
-    createRoom,
-    joinRoom,
-    startRoom,
-    updatePreferences,
-    leaveRoom,
-    clearError,
-  } = useRoomSocket();
+  status,
+  room,
+  previewRoom,
+  userId,
+  error,
+  createRoom,
+  joinRoom,
+  previewRoomCode,
+  startRoom,
+  updatePreferences,
+  leaveRoom,
+  clearError,
+} = useRoomSocket();
 
   const isRoom = room !== null;
 
@@ -779,10 +781,12 @@ export default function App() {
           <RoomPanel
             status={status}
             room={room}
+            previewRoom={previewRoom}
             userId={userId}
             error={error}
             onCreateRoom={createRoom}
             onJoinRoom={joinRoom}
+            onPreviewRoom={previewRoomCode}
             onLeaveRoom={handleLeaveRoom}
             onClearError={clearError}
           />

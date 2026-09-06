@@ -33,6 +33,10 @@ export type ServerMessage =
       type: "left_room";
     }
   | {
+      type: "room_preview";
+      room: RoomState;
+    }
+  | {
       type: "error";
       message: string;
     };

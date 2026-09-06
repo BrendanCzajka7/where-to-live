@@ -17,6 +17,7 @@ export function useRoomSocket() {
   const [status, setStatus] =
     useState<ConnectionStatus>("connecting");
   const [room, setRoom] = useState<RoomState | null>(null);
+  const [previewRoom, setPreviewRoom] = useState<RoomState | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,9 +59,14 @@ export function useRoomSocket() {
           setRoom(message.room);
           break;
 
-        case "left_room":
+        case "room_preview":
+          setPreviewRoom(message.room);
+          break;
+
+       case "left_room":
           setRoom(null);
           setUserId(null);
+          setPreviewRoom(null);
           setError(null);
           break;
 
@@ -134,6 +140,18 @@ export function useRoomSocket() {
       });
     }, [send]);
 
+  const previewRoomCode = useCallback(
+  (roomCode: string) => {
+    setError(null);
+
+    return send({
+      type: "preview_room",
+      roomCode,
+    });
+  },
+  [send],
+);
+
   const joinRoom = useCallback(
   (name: string, roomCode: string, icon: string) => {
       setError(null);
@@ -169,15 +187,17 @@ export function useRoomSocket() {
   }, []);
 
   return {
-    status,
-    room,
-    userId,
-    error,
-    createRoom,
-    joinRoom,
-    startRoom,
-    updatePreferences,
-    leaveRoom,
-    clearError,
-  };
+  status,
+  room,
+  previewRoom,
+  userId,
+  error,
+  createRoom,
+  joinRoom,
+  previewRoomCode,
+  startRoom,
+  updatePreferences,
+  leaveRoom,
+  clearError,
+};
 }
