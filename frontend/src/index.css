@@ -994,11 +994,22 @@ input[type="range"]::-moz-range-thumb {
   }
 
   .rankings {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 1fr 1px 1fr;
-    gap: 24px;
-  }
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.ranking-heading {
+  grid-column: 1 / -1;
+}
+
+.leaderboard-divider {
+  width: 1px;
+  height: 100%;
+  margin: 0;
+}
 
   .ranking-divider {
     width: 1px;
