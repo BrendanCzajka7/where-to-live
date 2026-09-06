@@ -29,18 +29,13 @@ const initialWeights: Weights = {
   affordability: 0,
   safety: 0,
   nature: 0,
-
-  temperature: 0,   // don't care; -10 cold, +10 hot
-  humidity: 0,      // don't care; -10 dry, +10 humid
-
+  temperature: 0,
+  humidity: 0,
   mountains: 0,
-
-  density: 0,       // don't care; -10 rural, +10 urban
+  density: 0,
   jobs: 0,
   coast: 0,
-
-  politics: 0,      // don't care; -10 red, +10 blue
-
+  politics: 0,
   healthcare: 0,
   schools: 0,
   weatherSeverity: 0,
@@ -64,14 +59,17 @@ const projection = geoAlbersUsa()
 
 const pathGenerator = geoPath(projection);
 
-function getColor(score: number) {
+function getColor(score: number, hasPreferences: boolean) {
+  if (!hasPreferences) return "#dbe3ef";
+
   if (score >= 85) return "#15803d";
   if (score >= 75) return "#22c55e";
   if (score >= 65) return "#84cc16";
   if (score >= 55) return "#eab308";
   if (score >= 45) return "#f97316";
   if (score >= 35) return "#ef4444";
-  return "#27272a";
+
+  return "#991b1b";
 }
 
 function getDirectionalLabels(criterion: Criterion) {
@@ -89,25 +87,11 @@ function getDirectionalLabels(criterion: Criterion) {
   }
 }
 
-/**
- * Directional state values are stored from 0–100:
- *
- * temperature: 0 = cold, 100 = hot
- * humidity:    0 = dry, 100 = humid
- * density:     0 = rural, 100 = urban
- * politics:    0 = red, 100 = blue
- *
- * User directional sliders run from -10 to +10.
- * We convert that into a desired state value from 0–100 and score
- * based on how close the state is to that preference.
- */
 function getDirectionalMatch(
   stateValue: number,
   preference: number,
 ): number {
-  if (preference === 0) {
-    return 100;
-  }
+  if (preference === 0) return 100;
 
   const desiredValue = ((preference + 10) / 20) * 100;
   const distance = Math.abs(stateValue - desiredValue);
@@ -119,15 +103,14 @@ export default function App() {
   const [weights, setWeights] = useState<Weights>(initialWeights);
   const [hoveredState, setHoveredState] = useState<string | null>(null);
 
+  const hasPreferences = Object.values(weights).some(
+    (value) => value !== 0,
+  );
+
   const rankedStates = useMemo(() => {
     const totalWeight = criteria.reduce((total, criterion) => {
       const value = weights[criterion.key] ?? 0;
-
-      if (directionalCriteria.has(criterion.key)) {
-        return total + Math.abs(value) ** 2;
-      }
-
-      return total + value ** 2;
+      return total + Math.abs(value) ** 2;
     }, 0);
 
     return states
@@ -147,9 +130,7 @@ export default function App() {
           if (directionalCriteria.has(key)) {
             const importance = Math.abs(preference) ** 2;
 
-            if (importance === 0) {
-              return total;
-            }
+            if (importance === 0) return total;
 
             const match = getDirectionalMatch(
               stateValue,
@@ -183,6 +164,11 @@ export default function App() {
     [rankedStates],
   );
 
+  const worstStates = useMemo(
+    () => [...rankedStates].reverse().slice(0, 5),
+    [rankedStates],
+  );
+
   function updateWeight(criterion: Criterion, value: number) {
     setWeights((current) => ({
       ...current,
@@ -199,11 +185,9 @@ export default function App() {
       <header className="header">
         <div>
           <p className="eyebrow">STATE FINDER</p>
-
           <h1>Where Should We Live?</h1>
-
           <p className="subtitle">
-            Choose what matters to you and see which states fit best.
+            Set your priorities. Find the states that fit your life.
           </p>
         </div>
 
@@ -211,16 +195,19 @@ export default function App() {
           type="button"
           className="reset-button"
           onClick={resetWeights}
+          disabled={!hasPreferences}
         >
-          Reset
+          Reset preferences
         </button>
       </header>
 
       <div className="dashboard">
         <section className="panel preferences">
           <div className="section-heading">
-            <h2>Your priorities</h2>
-            <span>Strong preferences matter more</span>
+            <div>
+              <p className="section-kicker">PREFERENCES</p>
+              <h2>What matters to you?</h2>
+            </div>
           </div>
 
           <div className="sliders">
@@ -243,10 +230,8 @@ export default function App() {
                     <div className="slider-label">
                       <span>{criterion.label}</span>
 
-                      <strong>
-                        {value === 0
-                          ? "Neutral"
-                          : Math.abs(value)}
+                      <strong className={value !== 0 ? "active-value" : ""}>
+                        {value === 0 ? "Any" : Math.abs(value)}
                       </strong>
                     </div>
 
@@ -262,11 +247,12 @@ export default function App() {
                           Number(event.target.value),
                         )
                       }
+                      aria-label={criterion.label}
                     />
 
                     <div className="direction-labels">
                       <span>{leftLabel}</span>
-                      <span>Don't care</span>
+                      <span>Any</span>
                       <span>{rightLabel}</span>
                     </div>
                   </div>
@@ -280,7 +266,10 @@ export default function App() {
                 >
                   <div className="slider-label">
                     <span>{criterion.label}</span>
-                    <strong>{value}</strong>
+
+                    <strong className={value !== 0 ? "active-value" : ""}>
+                      {value}
+                    </strong>
                   </div>
 
                   <input
@@ -308,9 +297,21 @@ export default function App() {
         </section>
 
         <section className="panel map-panel">
-          <div className="section-heading">
-            <h2>Best matches</h2>
-            <span>Hover over a state</span>
+          <div className="map-header">
+            <div>
+              <p className="section-kicker">YOUR MATCHES</p>
+              <h2>
+                {hasPreferences
+                  ? "Best states for you"
+                  : "Start with your priorities"}
+              </h2>
+            </div>
+
+            <span className="map-hint">
+              {hasPreferences
+                ? "Hover over a state"
+                : "Move a slider to begin"}
+            </span>
           </div>
 
           <div className="map-wrapper">
@@ -325,22 +326,16 @@ export default function App() {
                 const score = scoreByState.get(name) ?? 0;
                 const path = pathGenerator(mapState);
 
-                if (!path) {
-                  return null;
-                }
+                if (!path) return null;
 
                 return (
                   <path
                     key={name}
                     d={path}
-                    fill={getColor(score)}
+                    fill={getColor(score, hasPreferences)}
                     className="state"
-                    onMouseEnter={() =>
-                      setHoveredState(name)
-                    }
-                    onMouseLeave={() =>
-                      setHoveredState(null)
-                    }
+                    onMouseEnter={() => setHoveredState(name)}
+                    onMouseLeave={() => setHoveredState(null)}
                   />
                 );
               })}
@@ -351,75 +346,126 @@ export default function App() {
                 <strong>{hoveredState}</strong>
 
                 <span>
-                  {scoreByState.get(hoveredState) ?? 0}% match
+                  {hasPreferences
+                    ? `${scoreByState.get(hoveredState) ?? 0}% match`
+                    : "Set preferences to score"}
                 </span>
               </div>
             )}
           </div>
 
           <div className="legend">
-            <span>Lower match</span>
-            <div className="legend-gradient" />
-            <span>Higher match</span>
+            {hasPreferences ? (
+              <>
+                <span>Lower match</span>
+                <div className="legend-gradient" />
+                <span>Higher match</span>
+              </>
+            ) : (
+              <span>
+                Your map will update as you choose what matters.
+              </span>
+            )}
           </div>
         </section>
 
         <section className="panel rankings">
-  <div className="section-heading">
-    <h2>Top states</h2>
-    <span>Overall match</span>
-  </div>
+          <div className="ranking-section">
+            <div className="ranking-heading">
+              <div>
+                <p className="section-kicker">BEST FIT</p>
+                <h2>Top states</h2>
+              </div>
 
-  <div className="ranking-list">
-    {rankedStates.slice(0, 10).map((state, index) => (
-      <div className="ranking-row" key={state.name}>
-        <span className="rank">{index + 1}</span>
-
-        <div className="ranking-state">
-          <strong>{state.name}</strong>
-
-          <div className="score-bar">
-            <div
-              className="score-fill"
-              style={{ width: `${state.score}%` }}
-            />
-          </div>
-        </div>
-
-        <strong className="score">{state.score}%</strong>
-      </div>
-    ))}
-  </div>
-
-  <div className="worst-heading">
-    <h2>Worst states</h2>
-    <span>Lowest match</span>
-  </div>
-
-  <div className="ranking-list">
-    {rankedStates
-      .slice(-10)
-      .reverse()
-      .map((state, index) => (
-        <div className="ranking-row" key={state.name}>
-          <span className="rank">{index + 1}</span>
-
-          <div className="ranking-state">
-            <strong>{state.name}</strong>
-
-            <div className="score-bar">
-              <div
-                className="score-fill"
-                style={{ width: `${state.score}%` }}
-              />
+              <span>Match</span>
             </div>
+
+            {!hasPreferences ? (
+              <p className="empty-ranking">
+                Choose at least one preference to rank the states.
+              </p>
+            ) : (
+              <div className="ranking-list">
+                {rankedStates.slice(0, 5).map((state, index) => (
+                  <div
+                    className="ranking-row"
+                    key={state.name}
+                  >
+                    <span className="rank">
+                      {index + 1}
+                    </span>
+
+                    <div className="ranking-state">
+                      <strong>{state.name}</strong>
+
+                      <div className="score-bar">
+                        <div
+                          className="score-fill"
+                          style={{
+                            width: `${state.score}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <strong className="score">
+                      {state.score}%
+                    </strong>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <strong className="score">{state.score}%</strong>
-        </div>
-      ))}
-  </div>
-</section>
+          <div className="ranking-divider" />
+
+          <div className="ranking-section">
+            <div className="ranking-heading">
+              <div>
+                <p className="section-kicker">WORST FIT</p>
+                <h2>Lowest states</h2>
+              </div>
+
+              <span>Match</span>
+            </div>
+
+            {!hasPreferences ? (
+              <p className="empty-ranking">
+                Your lowest matches will appear here.
+              </p>
+            ) : (
+              <div className="ranking-list">
+                {worstStates.map((state, index) => (
+                  <div
+                    className="ranking-row"
+                    key={state.name}
+                  >
+                    <span className="rank">
+                      {index + 1}
+                    </span>
+
+                    <div className="ranking-state">
+                      <strong>{state.name}</strong>
+
+                      <div className="score-bar">
+                        <div
+                          className="score-fill"
+                          style={{
+                            width: `${state.score}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <strong className="score">
+                      {state.score}%
+                    </strong>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </main>
   );
